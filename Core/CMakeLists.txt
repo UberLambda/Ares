@@ -2,6 +2,7 @@
 
 add_executable(Ares.Core WIN32
     Main.cc
+    Task/TaskScheduler.cc
 )
 set_target_properties(Ares.Core PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/build/"
@@ -14,5 +15,5 @@ add_subdirectory(3rdparty/)
 target_link_libraries(Ares.Core PUBLIC
     glfw
     glm
-    boost
+    boost_context
 )
