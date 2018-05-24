@@ -16,3 +16,9 @@ target_include_directories(glm INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/glm/")
 # == License: Apache2 (see file: boost_context_ftl/LICENSE.md)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/boost_context_ftl")
 add_subdirectory(boost_context_ftl/)
+
+# == moodycamel::concurrentqueue
+# == Upstream: https://github.com/cameron314/concurrentqueue
+# == License: Boost 1.0
+add_library(concurrentqueue INTERFACE)
+target_include_directories(concurrentqueue INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue/")

@@ -16,4 +16,5 @@ target_link_libraries(Ares.Core PUBLIC
     glfw
     glm
     boost_context
+    concurrentqueue
 )
