@@ -27,11 +27,11 @@ class AtomicPool
     /// is full (no ungrabbed items to be found in it).
     size_t grabIndex()
     {
-        // The "grabbed?" value expected in the item to grab is `false`
-        static bool expectedGrabbed = false;
+        bool expectedGrabbed;
 
         for(size_t i = 0; i < n_; i ++)
         {
+            expectedGrabbed = false; // The "grabbed?" value expected in the item to grab is `false`
             if(itemsGrabbed_[i].compare_exchange_weak(expectedGrabbed, true))
             {
                 // Successfully grabbed what was an ungrabbed item
@@ -131,7 +131,7 @@ public:
         size_t itemIndex = item - items_;
 
         // The "grabbed?" value expected in the item to free is `true`
-        static bool expectedGrabbed = true;
+        bool expectedGrabbed = true;
 
         // Will return `true` if ungrabbing succeeded or `false` otherwise
         // (because the item was already ungrabbed)
