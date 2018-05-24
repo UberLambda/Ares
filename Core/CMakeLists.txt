@@ -9,3 +9,8 @@ set_target_properties(Ares.Core PROPERTIES
     OUTPUT_NAME Ares
     CXX_STANDARD 14
 )
+
+add_subdirectory(3rdparty/)
+target_link_libraries(Ares.Core PUBLIC
+    glfw
+)
