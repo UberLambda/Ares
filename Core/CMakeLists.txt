@@ -13,4 +13,5 @@ set_target_properties(Ares.Core PROPERTIES
 add_subdirectory(3rdparty/)
 target_link_libraries(Ares.Core PUBLIC
     glfw
+    glm
 )
