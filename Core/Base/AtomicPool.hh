@@ -148,6 +148,17 @@ public:
         size_t itemIndex = item - items_;
         return itemsGrabbed_[itemIndex];
     }
+
+    /// Returns the index of the given item in the pool.
+    /// **ASSERTS**: That the pool is currently valid and that the item could in fact
+    ///              grabbed from the pool
+    inline size_t indexOf(const T* item) const
+    {
+        assert(operator bool() && "Pool is invalid");
+        assert(itemInBounds(item) && "Item is out of bounds");
+
+        return item - items_;
+    }
 };
 
 }
