@@ -71,6 +71,18 @@ public:
         }
     }
 
+    /// Initializes a new atomic pool with capacity for `n` items; then, for each
+    /// `i < n`, sets `items[i] = genFunc(i)`.
+    template <typename GenFunc>
+    AtomicPool(size_t n, GenFunc genFunc)
+        : AtomicPool(n)
+    {
+        for(size_t i = 0; i < n; i ++)
+        {
+            items_[i] = genFunc(i);
+        }
+    }
+
     AtomicPool(AtomicPool&& toMove)
     {
         (void)operator=(std::move(toMove));

@@ -4,7 +4,6 @@
 #include <concurrentqueue.h>
 #include <atomic>
 #include <thread>
-#include <condition_variable>
 #include "Task.hh"
 #include "TaskVar.hh"
 #include "Fiber.hh"
@@ -34,20 +33,27 @@ class TaskScheduler
     };
     moodycamel::ConcurrentQueue<TaskSlot> tasks_;
 
-    std::condition_variable ready_;
-    std::mutex readyMutex_;
+    AtomicPool<Fiber> fibers_;
+    FiberStackStore fiberStacks_;
+
+    std::atomic<bool> ready_; // TODO Replace this with a condition_variable
     std::atomic<bool> running_;
     std::thread* workers_;
     struct WorkerData
     {
-        // FIXME IMPLEMENT: add current worker fiber, return worker fiber here
+        Fiber* prevFiber; ///< The fiber that was running on this worker previously.
+        Fiber* curFiber; ///< The fiber that is currently running on this worker.
     };
-    WorkerData* workersData_;
+    WorkerData* workerData_;
 
 
     /// Returns the index of the local worker thread, or `INVALID_INDEX` if the
     /// local thread is not a worker thread.
     size_t localWorkerIndex();
+
+    /// The function that each fiber in the scheduler will run: grabs a task,
+    /// executes it, switches to itself if the scheduler is still `running_`.
+    static void fiberFunc(void* data);
 
     /// The loop that each worker thread will run.
     static void workerLoop(TaskScheduler* scheduler);
