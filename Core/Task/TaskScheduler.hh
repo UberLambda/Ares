@@ -2,8 +2,9 @@
 
 #include <stddef.h>
 #include <concurrentqueue.h>
-#include <vector>
+#include <atomic>
 #include <thread>
+#include <condition_variable>
 #include "Task.hh"
 #include "TaskVar.hh"
 #include "Fiber.hh"
@@ -17,8 +18,12 @@ namespace Ares
 /// A scheduler of `Task`s.
 /// Schedulers distribute `m` tasks over `n` OS threads so that some of them can
 /// be run concurrently.
+///
+/// Based on the GDC talk "Parallelizing the Naughty Dog engine using fibers"
+/// and inspired by the implementation of task_scheduler in FiberTaskingLib
 class TaskScheduler
 {
+    static constexpr const size_t INVALID_INDEX = -1;
 
     unsigned int nWorkers_, nFibers_;
 
@@ -29,9 +34,20 @@ class TaskScheduler
     };
     moodycamel::ConcurrentQueue<TaskSlot> tasks_;
 
-    volatile bool running_;
-    std::vector<std::thread> workers_;
+    std::condition_variable ready_;
+    std::mutex readyMutex_;
+    std::atomic<bool> running_;
+    std::thread* workers_;
+    struct WorkerData
+    {
+        // FIXME IMPLEMENT: add current worker fiber, return worker fiber here
+    };
+    WorkerData* workersData_;
 
+
+    /// Returns the index of the local worker thread, or `INVALID_INDEX` if the
+    /// local thread is not a worker thread.
+    size_t localWorkerIndex();
 
     /// The loop that each worker thread will run.
     static void workerLoop(TaskScheduler* scheduler);
