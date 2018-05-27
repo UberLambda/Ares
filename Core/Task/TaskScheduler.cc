@@ -247,10 +247,20 @@ void TaskScheduler::fiberFunc(void* data)
     // can just grab a fresh one from the pool and switch to that.
 
     Fiber* localFiber = workerData.curFiber;
-    Fiber* targetFiber = workerData.doneFiber
-                         ? workerData.doneFiber
-                         : scheduler->lockingGrabFiber();
-    *targetFiber = Fiber(fiberFunc, targetFiber->stack(), targetFiber->stackSize(), scheduler);
+    Fiber* targetFiber = nullptr;
+    if(workerData.doneFiber)
+    {
+        // Reset the done fiber and recycle it
+        targetFiber = workerData.doneFiber;
+        *targetFiber = Fiber(fiberFunc, targetFiber->stack(), targetFiber->stackSize(), scheduler);
+    }
+    else
+    {
+        // Grab a new fiber from the pool
+        // No need to reset it since fibers in the pool are always ready to go
+        // (i.e. set to point to `fiberFunc`)
+        targetFiber = scheduler->fibers_.grab();
+    }
 
     workerData.curFiber = targetFiber;
     workerData.doneFiber = localFiber;
