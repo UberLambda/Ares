@@ -4,6 +4,7 @@
 #include <concurrentqueue.h>
 #include <atomic>
 #include <thread>
+#include <list>
 #include "Task.hh"
 #include "TaskVar.hh"
 #include "Fiber.hh"
@@ -22,7 +23,13 @@ namespace Ares
 /// and inspired by the implementation of task_scheduler in FiberTaskingLib
 class TaskScheduler
 {
+    // A returned index that means "invalid".
     static constexpr const size_t INVALID_INDEX = -1;
+
+    // The amount of attempts to grab a free fiber (`lockingGrabFiber()`) after
+    // which a deadlock is very likely
+    static constexpr const size_t GRAB_DEADLOCK_THRES = 100;
+
 
     unsigned int nWorkers_, nFibers_;
 
@@ -39,13 +46,24 @@ class TaskScheduler
     std::atomic<bool> ready_; // TODO Replace this with a condition_variable
     std::atomic<bool> running_;
     std::thread* workers_;
+    struct WaitingFiberSlot
+    {
+        Fiber* fiber;
+        TaskVar* var;
+        TaskVarValue target;
+    };
     struct WorkerData
     {
-        Fiber* prevFiber; ///< The fiber that was running on this worker previously.
         Fiber* curFiber; ///< The fiber that is currently running on this worker.
+        Fiber* doneFiber; ///< A fiber to free because it is done.
+        std::list<WaitingFiberSlot> waitingFibers; ///< The fibers waiting for a var on this worker.
     };
     WorkerData* workerData_;
 
+
+    /// Keeps attempting to grab a fiber until it succeeds, then returns it.
+    /// **ASSERTS** `false` if the number of attempts grabbing a fiber exceeeds `GRAB_DEADLOCK_THRES`
+    Fiber* lockingGrabFiber();
 
     /// Returns the index of the local worker thread, or `INVALID_INDEX` if the
     /// local thread is not a worker thread.

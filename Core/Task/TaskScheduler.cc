@@ -27,6 +27,7 @@ TaskScheduler::TaskScheduler(unsigned int nWorkers, unsigned int nFibers, size_t
     for(unsigned int j = 0; j < nWorkers_; j ++)
     {
         workers_[j] = std::thread(workerLoop, this);
+        // TODO Pin thread to physical thread for [much] better performance
     }
 
     // Unlock workers and start spinning
@@ -76,13 +77,78 @@ void TaskScheduler::waitFor(TaskVar& var, TaskVarValue target)
         return;
     }
 
-    // FIXME IMPLEMENT: Instead of spinlocking, put local fiber in waiting list
-    //                  and start a new one
-    while(var.load() != target)
+    auto workerIndex = localWorkerIndex();
+    if(workerIndex != INVALID_INDEX)
     {
+        // `waitFor()` was called from a worker: put the current fiber to sleep
+        // and start executing other tasks
+        // IMPORTANT This code is heavily simplified by the assumption that the
+        //           waiting list is per-worker and not shared. Pushing waiting
+        //           fibers to the waiting list, switching to them and returning
+        //           to the previous fiber are hence all guaranteed to always
+        //           "just work" without any atomics/locking since no other
+        //            thread can get in the way!
+        auto& workerData = workerData_[workerIndex];
+
+        WaitingFiberSlot waitingFiberSlot =
+        {
+            .fiber = workerData.curFiber, // The current fiber is the one that has to sleep...
+            .var = &var, // ...until `var`...
+            .target = target //...reaches `target`
+        };
+        workerData.waitingFibers.push_back(waitingFiberSlot);
+
+        // Then we switch to a new fiber while we wait
+        workerData.curFiber = lockingGrabFiber();
+        waitingFiberSlot.fiber->switchTo(*workerData.curFiber);
+
+        // At some point we will get back here because `curFiber` switched to
+        // `waitingFiberSlot.fiber` because the slot's var reached its target
+        // `curFiber` can then be **reset and** freed, we're actually running on `waitingFiber`
+        // now!
+        // The fiber has to be reset since fibers from the pool are expected to
+        // all point to `fiberFunc`.
+        Fiber* waitingFiber = waitingFiberSlot.fiber;
+
+        Fiber* evictedFiber = workerData.curFiber;
+        *evictedFiber = Fiber(fiberFunc, evictedFiber->stack(), evictedFiber->stackSize(), this);
+
+        bool evictedFiberFreed = fibers_.free(evictedFiber);
+        assert(evictedFiberFreed && "Could not free waiting fiber");
+
+        workerData.curFiber = waitingFiber; // Current fiber is now what was the waiting fiber!
+
+        // `waitFor()` will return here and the task will keep running on `curFiber`
+    }
+    else
+    {
+        // `waitFor()` was called from another thread: spinlock
+        // FIXME Replace this with something more sensible!
+        //       (Would the system work better if the list of waiting fibers was
+        //       a shared lockless list instead of being a private per-worker list?)
+        while(var.load() != target)
+        {
+        }
     }
 }
 
+
+Fiber* TaskScheduler::lockingGrabFiber()
+{
+    Fiber* fiber = nullptr;
+    for(size_t nAttempts = 0; !fiber; nAttempts ++)
+    {
+        fiber = fibers_.grab();
+
+        if(nAttempts > GRAB_DEADLOCK_THRES)
+        {
+            // TODO Log and `abort()` even in release?
+            assert(false && "Deadlock: all fibers are grabbed");
+        }
+    }
+
+    return fiber;
+}
 
 size_t TaskScheduler::localWorkerIndex()
 {
@@ -109,17 +175,18 @@ void TaskScheduler::workerLoop(TaskScheduler* scheduler)
 
     // Grab a a fiber and make it as the initial "scheduler fiber" for the local worker.
     // After switching, the scheduler fiber will continue to recurse into itself
-    // until `scheduler->running_` is set to `false` - after which the thread
-    // will terminate.
+    // until `scheduler->running_` is set to `false`, after which the fiber will
+    // terminate - and the worker thread with it
     auto workerIndex = scheduler->localWorkerIndex();
     assert((workerIndex != INVALID_INDEX) && "workerLoop() not running inside of a worker");
     auto& workerData = scheduler->workerData_[workerIndex];
 
-    workerData.prevFiber = nullptr;
-    workerData.curFiber = scheduler->fibers_.grab();
+    Fiber* startFiber = scheduler->lockingGrabFiber();
+    workerData.curFiber = startFiber;
+    workerData.doneFiber = nullptr;
 
-    Fiber thisFiber;
-    thisFiber.switchTo(*workerData.curFiber);
+    Fiber localFiber;
+    localFiber.switchTo(*startFiber);
 
     assert(false && "This should never be reached");
 }
@@ -132,19 +199,21 @@ void TaskScheduler::fiberFunc(void* data)
     assert((workerIndex != INVALID_INDEX) && "fiberFunc() not running inside of a worker");
     auto& workerData = scheduler->workerData_[workerIndex];
 
-    if(workerData.prevFiber)
+    // Wake up the first fiber that is done waiting
+    for(auto it = workerData.waitingFibers.begin(); it != workerData.waitingFibers.end(); it ++)
     {
-        // Reset the previous fiber, then free it back into the pool since it's
-        // not needed anymore
-        *workerData.prevFiber = std::move(Fiber(fiberFunc,
-                                                workerData.prevFiber->stack(), workerData.prevFiber->stackSize(),
-                                                scheduler));
-        scheduler->fibers_.free(workerData.prevFiber);
+        if(it->var->load() == it->target)
+        {
+            // Fiber is done waiting, resume it
+            Fiber* localFiber = workerData.curFiber;
+            Fiber* waitingFiber = it->fiber;
 
-        workerData.prevFiber = nullptr;
+            workerData.waitingFibers.erase(it);
+            localFiber->switchTo(*waitingFiber);
+        }
     }
 
-    // Try running a task
+    // After that try running a task
     TaskSlot taskSlot;
     if(scheduler->tasks_.try_dequeue(taskSlot))
     {
@@ -160,16 +229,32 @@ void TaskScheduler::fiberFunc(void* data)
         }
     }
 
-    if(scheduler->running_)
+    if(!scheduler->running_)
     {
-        // Recurse
-        Fiber* thisFiber = workerData.curFiber;
-        workerData.prevFiber = thisFiber;
-        workerData.curFiber = scheduler->fibers_.grab();
-        thisFiber->switchTo(*workerData.curFiber); // This will make the current fiber be freed on the next iteration
-
-        assert(false && "This should never be reached");
+        // The scheduler is done running. Make this fiber end here: the worker
+        // thread will die with it
+        return;
     }
+
+    // Else we need to recurse back into `fiberFunc()`.
+    // You could just mark `curFiber` as done, grab another fiber from the pool
+    // and switch to it but that would require an `AtomicPool::grab()` per
+    // iteration, which is an expensive operation. It's better to instead try to
+    // recycle `doneFiber` (after all it was to be put in the fiber pool again!);
+    // you can just reset `doneFiber` to point to `fiberFunc()` and mark it as the
+    // new `curFiber`, then switch to it in a ping-pong fashion.
+    // If we do not in fact have a `doneFiber` (but this happens rarely) then we
+    // can just grab a fresh one from the pool and switch to that.
+
+    Fiber* localFiber = workerData.curFiber;
+    Fiber* targetFiber = workerData.doneFiber
+                         ? workerData.doneFiber
+                         : scheduler->lockingGrabFiber();
+    *targetFiber = Fiber(fiberFunc, targetFiber->stack(), targetFiber->stackSize(), scheduler);
+
+    workerData.curFiber = targetFiber;
+    workerData.doneFiber = localFiber;
+    localFiber->switchTo(*targetFiber);
 }
 
 }
