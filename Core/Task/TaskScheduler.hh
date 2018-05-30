@@ -77,6 +77,15 @@ class TaskScheduler
     static void workerLoop(TaskScheduler* scheduler);
 
 public:
+    /// Returns the optimal amount of worker threads for the host machine.
+    /// This usually returns `(number of physical threads) - 1` since the main
+    /// thread most of the time needs to do different things than run tasks (ex.:
+    /// polling system event queues, reading files...)
+    static unsigned int optimalNWorkers();
+
+    /// Initializes a task scheduler that will spin `nWorkers` worker threads,
+    /// sharing a pool of `nFibers` fibers each with `fiberStackSize` bytes of
+    /// stack.
     TaskScheduler(unsigned int nWorkers,
                   unsigned int nFibers=200, size_t fiberStackSize=128*1024);
     ~TaskScheduler();

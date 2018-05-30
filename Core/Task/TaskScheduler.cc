@@ -5,6 +5,13 @@
 namespace Ares
 {
 
+unsigned int TaskScheduler::optimalNWorkers()
+{
+    auto nHardwareThreads = std::thread::hardware_concurrency();
+    return nHardwareThreads > 1 ? nHardwareThreads - 1 : 1;
+}
+
+
 TaskScheduler::TaskScheduler(unsigned int nWorkers, unsigned int nFibers, size_t fiberStackSize)
     : nWorkers_(nWorkers),
       fiberStacks_(nFibers, fiberStackSize)
@@ -27,7 +34,7 @@ TaskScheduler::TaskScheduler(unsigned int nWorkers, unsigned int nFibers, size_t
     for(unsigned int j = 0; j < nWorkers_; j ++)
     {
         workers_[j] = std::thread(workerLoop, this);
-        // TODO Pin thread to physical thread for [much] better performance
+        // FIXME IMPLEMENT IMPORTANT Pin thread to physical thread for [much] better performance
     }
 
     // Unlock workers and start spinning
