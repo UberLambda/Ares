@@ -7,32 +7,77 @@
 namespace Ares
 {
 
-/// A string of a fixed `size`.
+/// A hashed string of a fixed `size`.
 /// Useful to be used as a key for hash maps.
 template <size_t size>
-struct KeyString
+class KeyString
 {
-    char str[size];
+    char str_[size];
+    U64 hash_;
 
+    KeyString(KeyString<size>&& toMove) = delete;
+    KeyString& operator=(KeyString<size>&& toMove) = delete;
+
+public:
+    /// Creates a new, empty key string.
     KeyString()
+        : hash_(0)
     {
-        str[0] = '\0';
+        str_[0] = '\0';
     }
-    KeyString(const char* toCopy)
+
+    /// Creates a new keystring by copying at most `size - 1` characters from `str`.
+    constexpr KeyString(const char* str)
     {
-        strncpy(str, toCopy, size - 1);
-        str[size - 1] = '\0';
+        // Copy as many characters as possible
+        size_t len = 0;
+        for(len = 0; len < size && str[len] != '\0'; len ++)
+        {
+            str_[len] = str[len];
+        }
+        str_[len] = '\0';
+
+        // Hash string with SDBM hash (public domain)
+        // See: http://www.cse.yorku.ca/~oz/hash.html
+        // FIXME Should iterate `unsigned char`s, not `char`s - but should work anyways
+        //       constexpr constructors do not allow `reinterpret_cast`s...
+        hash_ = 0;
+        for(auto ch = str_; *ch; ch ++)
+        {
+            hash_ = int(*ch) + (hash_ << 6) + (hash_ << 16) - hash_;
+        }
+    }
+
+    constexpr KeyString(const KeyString<size>& toCopy)
+    {
+        (void)operator=(toCopy);
+    }
+
+    constexpr KeyString& operator=(const KeyString<size>& toCopy)
+    {
+        strncpy(str_, toCopy.str_, size);
+        hash_ = toCopy.hash_;
+        return *this;
     }
 
     inline operator const char*() const
     {
-        return str;
+        return str_;
     }
 
-    inline bool operator==(const KeyString<size>& other) const
+    inline U64 hash() const
+    {
+        return hash_;
+    }
+
+    /// **IMPORTANT**: Other is passed by value so that temporary strings can be
+    ///                as hashmap keys; this fails if it's passed by reference
+    ///                since a reference to a temporary will produce unexpected
+    ///                results
+    inline bool operator==(const KeyString<size> other) const
     {
         // Perform a normal, byte-by-byte comparison
-        return strncmp(str, other.str, size) == 0;
+        return strncmp(str_, other.str_, size) == 0;
     }
 };
 
@@ -44,16 +89,9 @@ namespace std
 template <size_t size>
 struct hash<Ares::KeyString<size>>
 {
-    size_t operator()(const Ares::KeyString<size>& value) const
+    inline size_t operator()(const Ares::KeyString<size>& value) const
     {
-        // SDBM hash (public domain).
-        // See: http://www.cse.yorku.ca/~oz/hash.html
-        Ares::U64 hash = 0;
-        for(auto ch = (const unsigned char*)value.str; *ch; ch ++)
-        {
-            hash = int(*ch) + (hash << 6) + (hash << 16) - hash;
-        }
-        return hash;
+        return value.hash();
     }
 };
 

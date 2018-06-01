@@ -2,6 +2,7 @@
 
 #include <string>
 #include "VideoMode.hh"
+#include "Axis.hh"
 
 namespace Ares
 {
@@ -11,6 +12,8 @@ class Window
 {
     struct Impl;
     Impl* impl_;
+
+    AxisMap axisMap_;
 
     Window(const Window& toCopy) = delete;
     Window& operator=(const Window& toCopy) = delete;
@@ -51,6 +54,15 @@ public:
     /// `pollEvents()` call.
     /// **ASSERTS**: `operator bool()`
     Resolution resolution() const;
+
+    /// Returns a reference to the window's axis map, which is updated as of the
+    /// latest `pollEvents()` call.
+    /// **ASSERTS**: `operator bool()`
+    inline const AxisMap& axisMap() const
+    {
+        return axisMap_;
+    }
+
 
     /// Tries to change the Window's video mode to `target`. This may or may not
     /// succeed fully; check resolution, refresh rate, etc. afterwards to see if

@@ -7,56 +7,25 @@
 // =============================================================================
 // == GLFW 3.x Window implementation: for Windows, POSIX, Mac OS              ==
 // =============================================================================
-
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#include "GLFW.hh"
 
 namespace Ares
 {
 
-/// An helper singleton used to initialize and halt GLFW automagically.
-class GLFW
-{
-    bool ok_;
-
-    GLFW()
-    {
-        ok_ = glfwInit();
-    }
-
-    GLFW(const GLFW& toCopy) = delete;
-    GLFW& operator=(const GLFW& toCopy) = delete;
-    GLFW(GLFW&& toMove) = delete;
-    GLFW& operator=(GLFW&& toMove) = delete;
-
-public:
-    static GLFW& instance()
-    {
-        static GLFW instance;
-        return instance;
-    }
-
-    ~GLFW()
-    {
-        if(ok_)
-        {
-            glfwTerminate();
-        }
-        ok_ = false;
-    }
-
-    inline operator bool() const
-    {
-        return ok_;
-    }
-};
-
-
 struct Window::Impl
 {
+    static void scrollCallbackGLFW(GLFWwindow* window, double dx, double dy)
+    {
+        auto impl = reinterpret_cast<Window::Impl*>(glfwGetWindowUserPointer(window));
+        impl->mouseScrollX = dx;
+        impl->mouseScrollY = dy;
+    }
+
     GLFWwindow* window;
     std::string windowTitle;
+    double mouseScrollX, mouseScrollY;
 };
+
 
 Window::Window()
     : impl_(nullptr)
@@ -80,7 +49,15 @@ Window::Window(VideoMode videoMode, const std::string& title)
         return;
     }
 
-    // FIXME Implement initialize Vulkan here
+    // Register callbacks; window user data will be `impl_`
+    glfwSetWindowUserPointer(impl_->window, impl_);
+    glfwSetScrollCallback(impl_->window, Impl::scrollCallbackGLFW);
+
+    // Enable sticky keys so that no key events are lost
+    // FIXME Remove this maybe?
+    glfwSetInputMode(impl_->window, GLFW_STICKY_KEYS, true);
+
+    // FIXME IMPLEMENT initialize Vulkan here
 
     this->changeVideoMode(videoMode);
     this->title(title);
@@ -120,6 +97,11 @@ void Window::pollEvents()
 {
     ARES_windowAssertOk();
     glfwPollEvents();
+
+    // Update axis map
+    updateGLFWAxisMap(impl_->window, axisMap_, impl_->mouseScrollX, impl_->mouseScrollY);
+    // Reset mouse scroll to 0 since scrolling has already been registered by `updateGLFWAxisMap`
+    impl_->mouseScrollX = impl_->mouseScrollY = 0;
 }
 
 Resolution Window::resolution() const
