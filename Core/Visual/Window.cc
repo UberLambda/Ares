@@ -9,6 +9,11 @@
 // =============================================================================
 #include "GLFW.hh"
 
+// FIXME IMPLEMENT Added joystick plug/unplug callback
+//                 On joystick unplug, reset all joystick axes to `0`. This is
+//                 to prevent the last value saved in "Joy.AxisN" to "stick" and
+//                 change the output sum
+
 namespace Ares
 {
 

@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <utility>
 #include "NumTypes.hh"
 
 namespace Ares
@@ -14,9 +15,6 @@ class KeyString
 {
     char str_[size] = {'\0'};
     U64 hash_ = 0;
-
-    KeyString(KeyString<size>&& toMove) = delete;
-    KeyString& operator=(KeyString<size>&& toMove) = delete;
 
 public:
     /// Creates a new, empty key string.
@@ -55,8 +53,26 @@ public:
 
     constexpr KeyString& operator=(const KeyString<size>& toCopy)
     {
-        strncpy(str_, toCopy.str_, size);
+        memcpy(str_, toCopy.str_, size);
         hash_ = toCopy.hash_;
+        return *this;
+    }
+
+    constexpr KeyString(KeyString<size>&& toMove)
+    {
+        (void)operator=(std::move(toMove));
+    }
+
+    constexpr KeyString& operator=(KeyString<size>&& toMove)
+    {
+        // Almost functionally identical to copy...
+        memmove(str_, toMove.str_, size);
+        hash_ = toMove.hash_;
+
+        // ...but also invalidates moved axis
+        toMove.str_[0] = '\0';
+        toMove.hash_ = 0;
+
         return *this;
     }
 
