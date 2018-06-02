@@ -12,8 +12,8 @@ namespace Ares
 template <size_t size>
 class KeyString
 {
-    char str_[size];
-    U64 hash_;
+    char str_[size] = {'\0'};
+    U64 hash_ = 0;
 
     KeyString(KeyString<size>&& toMove) = delete;
     KeyString& operator=(KeyString<size>&& toMove) = delete;
@@ -31,7 +31,7 @@ public:
     {
         // Copy as many characters as possible
         size_t len = 0;
-        for(len = 0; len < size && str[len] != '\0'; len ++)
+        for(len = 0; len < (size - 1) && str[len] != '\0'; len ++)
         {
             str_[len] = str[len];
         }
