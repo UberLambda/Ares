@@ -63,6 +63,13 @@ public:
     {
         return map_[name];
     }
+
+    /// Returns `true` if the map contains an axis with the given name or `false`
+    /// otherwise.
+    inline bool has(const AxisName& name) const
+    {
+        return map_.find(name) != map_.end();
+    }
 };
 
 }
