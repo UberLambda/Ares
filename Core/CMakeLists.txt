@@ -3,6 +3,7 @@
 add_executable(Ares.Core WIN32
     Main.cc
     Task/TaskScheduler.cc
+    Data/FileIO.cc
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
 )
 set_target_properties(Ares.Core PROPERTIES
