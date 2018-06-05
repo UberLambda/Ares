@@ -31,4 +31,4 @@ target_include_directories(concurrentqueue INTERFACE "${CMAKE_CURRENT_SOURCE_DIR
 find_package(Vulkan REQUIRED)
 add_library(vulkan INTERFACE)
 target_include_directories(vulkan INTERFACE ${Vulkan_INCLUDE_DIRS})
-# NOTE: Do not link to Vulkan library, GLFW will dinamically load it!
+target_link_libraries(vulkan INTERFACE ${Vulkan_LIBRARIES})

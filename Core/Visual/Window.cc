@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <utility>
 #include "../Base/Utils.hh"
+#include "../Base/NumTypes.hh"
 
 // =============================================================================
 // == GLFW 3.x Window implementation: for Windows, POSIX, Mac OS              ==
@@ -45,7 +46,15 @@ Window::Window(VideoMode videoMode, const std::string& title)
         return;
     }
 
+    if(!glfwVulkanSupported())
+    {
+        // GLFW: Vulkan not supported
+        return;
+    }
+
     impl_ = new Impl();
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Vulkan: no [E]GL[ES] context required
     impl_->window = glfwCreateWindow(800, 600, "Ares", nullptr, nullptr);
     if(!impl_->window)
     {
@@ -199,15 +208,32 @@ Window& Window::changeVideoMode(VideoMode target)
 }
 
 
+bool Window::queryRequiredVulkanExts(const char**& exts, unsigned int& count) const
+{
+    ARES_windowAssertOk();
+    U32 queriedCount = 0;
+    auto queriedExts = glfwGetRequiredInstanceExtensions(&queriedCount);
+    exts = queriedExts;
+    count = queriedCount;
+    return exts != nullptr;
+}
+
+VkResult Window::createVulkanSurface(VkSurfaceKHR& surface, VkInstance instance,
+                                     const VkAllocationCallbacks* allocator)
+{
+    ARES_windowAssertOk();
+    return glfwCreateWindowSurface(instance, impl_->window, allocator, &surface);
+}
+
 void Window::beginFrame()
 {
-    assert(operator bool() && "Uninitialized Window");
+    ARES_windowAssertOk();
     // FIXME Make context current if OpenGL
 }
 
 void Window::endFrame()
 {
-    assert(operator bool() && "Uninitialized Window");
+    ARES_windowAssertOk();
     glfwSwapBuffers(impl_->window);
 }
 

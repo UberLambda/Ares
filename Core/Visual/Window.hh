@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vulkan/vulkan.h>
 #include "VideoMode.hh"
 #include "Axis.hh"
 
@@ -79,6 +80,20 @@ public:
     const std::string& title() const;
     Window& title(const std::string& newTitle);
 
+
+    /// Attempts to query the Vulkan instance extensions required to make the
+    /// Window work with Vulkan. Returns `true` and sets `exts` and `count` on
+    /// success or `false` on error.
+    /// **ASSERTS**: `operator bool()`
+    /// **WARNING**: Do not `free()` the returned pointer; also, it is guaranteed
+    ///              to be valid only up to the next call of this function!
+    bool queryRequiredVulkanExts(const char**& exts, unsigned int& count) const;
+
+    /// Attempts to create a Vulkan surface for the window. Returns a non-zero
+    /// `VkResult` on error.
+    /// **ASSERTS**: `operator bool()`
+    VkResult createVulkanSurface(VkSurfaceKHR& surface, VkInstance instance,
+                                 const VkAllocationCallbacks* allocator=nullptr);
 
     /// Makes the Window prepare for the rendering of a new frame.
     /// **ASSERTS**: `operator bool()`
