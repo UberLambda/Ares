@@ -40,4 +40,5 @@ target_link_libraries(Ares.Core PUBLIC
     glm
     boost_context
     concurrentqueue
+    vulkan
 )

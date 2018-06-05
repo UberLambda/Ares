@@ -1,4 +1,6 @@
 # == GLFW (3.x) == Upstream: https://github.com/glfw/glfw == License: zlib
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(glfw/)
 
 # == glm == Upstream: https://github.com/g-truc/glm == License: MIT
@@ -22,3 +24,11 @@ add_subdirectory(boost_context_ftl/)
 # == License: Boost 1.0
 add_library(concurrentqueue INTERFACE)
 target_include_directories(concurrentqueue INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue/")
+
+# == Vulkan (+ vulkan-hpp)
+# == Upstream: https://www.khronos.org/vulkan/ [imported via find script]
+# == License: Apache2 (see system headers)
+find_package(Vulkan REQUIRED)
+add_library(vulkan INTERFACE)
+target_include_directories(vulkan INTERFACE ${Vulkan_INCLUDE_DIRS})
+# NOTE: Do not link to Vulkan library, GLFW will dinamically load it!
