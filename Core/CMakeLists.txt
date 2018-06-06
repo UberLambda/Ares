@@ -5,6 +5,7 @@ add_executable(Ares.Core WIN32
     Task/TaskScheduler.cc
     Data/FileIO.cc
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
+    Gfx/Vulkan.cc
 )
 set_target_properties(Ares.Core PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/build/"
