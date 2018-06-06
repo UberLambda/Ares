@@ -6,6 +6,7 @@ add_executable(Ares.Core WIN32
     Data/FileIO.cc
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
     Gfx/Vulkan.cc
+    Debug/Log.cc
 )
 set_target_properties(Ares.Core PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/build/"
@@ -42,4 +43,5 @@ target_link_libraries(Ares.Core PUBLIC
     boost_context
     concurrentqueue
     vulkan
+    tinyformat
 )

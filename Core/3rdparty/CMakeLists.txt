@@ -32,3 +32,9 @@ find_package(Vulkan REQUIRED)
 add_library(vulkan INTERFACE)
 target_include_directories(vulkan INTERFACE ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(vulkan INTERFACE ${Vulkan_LIBRARIES})
+
+# == tinyformat
+# == Upstream: https://github.com/c42f/tinyformat [in-tree]
+# == License: Boost 1.0
+add_library(tinyformat INTERFACE)
+target_include_directories(tinyformat INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/tinyformat/")
