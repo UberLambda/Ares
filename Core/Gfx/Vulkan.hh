@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace Ares
@@ -22,7 +23,7 @@ VkResult createInstance(VkInstance& outInstance,
                         const char** requiredLayers, unsigned int nRequiredLayers,
                         const VkAllocationCallbacks* allocator=nullptr);
 
-/// Attempts to create a `VkDebugReportCallbackEXT` for a vulkan instance, given
+/// Attempts to create a `VkDebugReportCallbackEXT` for a Vulkan instance, given
 /// its callback function, flags to filter, and optional user data pointer.
 /// Returns a non-`VK_SUCCESS` `VkResult` on failure.
 VkResult createDebugCallback(VkDebugReportCallbackEXT& outCallback,
@@ -30,6 +31,10 @@ VkResult createDebugCallback(VkDebugReportCallbackEXT& outCallback,
                              PFN_vkDebugReportCallbackEXT callbackFunc,
                              VkDebugReportFlagsEXT flags, void* userData=nullptr,
                              const VkAllocationCallbacks* allocator=nullptr);
+
+/// Attempts to list Vulkan physical devices for a Vulkan instance. Returns a
+/// non-`VK_SUCCESS` `VkResult` on failure.
+VkResult listPhysicalDevices(std::vector<VkPhysicalDevice>& devices, VkInstance instance);
 
 }
 }

@@ -101,5 +101,29 @@ VkResult createDebugCallback(VkDebugReportCallbackEXT& outCallback,
     }
 }
 
+VkResult listPhysicalDevices(std::vector<VkPhysicalDevice>& devices,
+                             VkInstance instance)
+
+{
+    // Query device count and devices
+    U32 nDevices = 0;
+    VkResult res = vkEnumeratePhysicalDevices(instance, &nDevices, nullptr);
+    if (res != VK_SUCCESS)
+    {
+        // Error while getting physical device count
+        return res;
+    }
+
+    devices.resize(nDevices);
+    res = vkEnumeratePhysicalDevices(instance, &nDevices, &devices[0]);
+    if (res != VK_SUCCESS)
+    {
+        // Error while getting physical devices
+        return res;
+    }
+
+    return VK_SUCCESS;
+}
+
 }
 }
