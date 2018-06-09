@@ -22,10 +22,13 @@ VkResult createInstance(VkInstance& outInstance,
                         const char** requiredLayers, unsigned int nRequiredLayers,
                         const VkAllocationCallbacks* allocator=nullptr);
 
-
+/// Attempts to create a `VkDebugReportCallbackEXT` for a vulkan instance, given
+/// its callback function, flags to filter, and optional user data pointer.
+/// Returns a non-`VK_SUCCESS` `VkResult` on failure.
 VkResult createDebugCallback(VkDebugReportCallbackEXT& outCallback,
                              VkInstance instance,
-                             PFN_vkDebugReportCallbackEXT callbackFunc, VkDebugReportFlagsEXT flags,
+                             PFN_vkDebugReportCallbackEXT callbackFunc,
+                             VkDebugReportFlagsEXT flags, void* userData=nullptr,
                              const VkAllocationCallbacks* allocator=nullptr);
 
 }

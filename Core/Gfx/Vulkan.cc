@@ -79,7 +79,7 @@ VkResult createInstance(VkInstance& outInstance,
 
 VkResult createDebugCallback(VkDebugReportCallbackEXT& outCallback,
                              VkInstance instance,
-                             PFN_vkDebugReportCallbackEXT callbackFunc, VkDebugReportFlagsEXT flags,
+                             PFN_vkDebugReportCallbackEXT callbackFunc, VkDebugReportFlagsEXT flags, void* userData,
                              const VkAllocationCallbacks* allocator)
 {
     VkDebugReportCallbackCreateInfoEXT createInfo =
@@ -87,6 +87,7 @@ VkResult createDebugCallback(VkDebugReportCallbackEXT& outCallback,
         .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
         .flags = flags,
         .pfnCallback = callbackFunc,
+        .pUserData = userData,
     };
 
     auto creatorFunc = ARES_vkFunc(instance, vkCreateDebugReportCallbackEXT);
