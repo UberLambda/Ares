@@ -5,7 +5,6 @@ add_executable(Ares.Core WIN32
     Task/TaskScheduler.cc
     Data/FileIO.cc
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
-    Gfx/Vulkan.cc
     Debug/Log.cc
 )
 set_target_properties(Ares.Core PROPERTIES
