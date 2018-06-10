@@ -241,3 +241,21 @@ inline constexpr IterMapper<U, TIter, MapperFunc> map(TIter begin, TIter end, Ma
 
 
 }
+
+
+#if __cplusplus >= 201703L
+//  std::as_const
+#   include <utility>
+#else
+#   include <type_traits>
+namespace std
+{
+
+template <typename T>
+inline const T& as_const(T& t)
+{
+    return t;
+}
+
+}
+#endif
