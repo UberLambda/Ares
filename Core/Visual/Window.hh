@@ -8,6 +8,7 @@
 namespace Ares
 {
 
+
 /// A rendering and input context.
 class Window
 {
@@ -20,14 +21,22 @@ class Window
     Window& operator=(const Window& toCopy) = delete;
 
 public:
+    /// The graphics API to use.
+    enum Api
+    {
+        GL33, ///< OpenGL 3.3 (core)
+        VK11, ///< Vulkan 1.1
+    };
+
+
     /// Creates a new Window object, but does not initialize it.
     Window();
 
-    /// Initializes a new Window with a default video mode and title and then changes
-    /// video mode and title accordingly.
+    /// Initializes a new Window using the given Api with a default video mode
+    /// and title and then changes video mode and title accordingly.
     /// Check `operator bool()` to see if initialization succeeded.
     /// **WARNING** if GLFW: Needs to be called from the main thread!
-    Window(VideoMode videoMode, const std::string& title);
+    Window(Api api, VideoMode videoMode, const std::string& title);
 
     Window(Window&& toMove);
     Window& operator=(Window&& toMove);

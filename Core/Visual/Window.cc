@@ -38,7 +38,7 @@ Window::Window()
 {
 }
 
-Window::Window(VideoMode videoMode, const std::string& title)
+Window::Window(Api api, VideoMode videoMode, const std::string& title)
 {
     if(!GLFW::instance())
     {
@@ -46,15 +46,29 @@ Window::Window(VideoMode videoMode, const std::string& title)
         return;
     }
 
-    if(!glfwVulkanSupported())
-    {
-        // GLFW: Vulkan not supported
-        return;
-    }
-
     impl_ = new Impl();
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // Vulkan: no [E]GL[ES] context required
+    switch(api)
+    {
+    case GL33:
+        // OpenGL 3.3
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    break;
+
+    default:
+        // Vulkan
+        if(!glfwVulkanSupported())
+        {
+            // GLFW: Vulkan not supported
+            return;
+        }
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // No [E]GL[ES] context required
+    }
+
+
     impl_->window = glfwCreateWindow(800, 600, "Ares", nullptr, nullptr);
     if(!impl_->window)
     {

@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Axis.hh"
-#define GLFW_INCLUDE_VULKAN
+#include <vulkan/vulkan.h>
+#include <GL/gl.h>
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
 namespace Ares
