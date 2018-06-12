@@ -4,6 +4,10 @@
 #include <tuple>
 #include <type_traits>
 #include <algorithm>
+#ifdef _MSC_VER
+//  MSVC
+#   include <intrin.h>
+#endif
 
 namespace Ares
 {
@@ -237,6 +241,79 @@ template <typename U, typename TIter, typename MapperFunc>
 inline constexpr IterMapper<U, TIter, MapperFunc> map(TIter begin, TIter end, MapperFunc func)
 {
     return IterMapper<U, TIter, MapperFunc>(begin, end, func);
+}
+
+
+/// Writes an endianness-swapped version of `input`, a char array of `size` bytes,
+/// to `output`.
+///
+/// Only works if `sizeof(char) == 1`.
+template <size_t size>
+inline void swapEndianness(char* output, const char* input)
+{
+    static_assert(sizeof(char) == 1,
+                  "sizeof(char) != 1, swapEndianness won't work!");
+
+    const char* revInput = input + size; // (note: one-past-the-end pointer)
+    for(size_t i = 0; i < size; i ++)
+    {
+        *output++ = *--revInput;
+    }
+}
+
+template <>
+inline void swapEndianness<1>(char* output, const char* input)
+{
+    // Accelerated 8-bit endianness swap (aka: just copy the one byte!)
+    *output = *input;
+}
+
+template <>
+inline void swapEndianness<2>(char* output, const char* input)
+{
+    // Accelerated 16-bit endianness swap
+
+#if defined(__GNUC__)
+    // GCC-like compiler
+    *reinterpret_cast<U16*>(output) = __builtin_bswap16(*reinterpret_cast<const U16*>(input));
+#elif defined(_MSC_VER)
+    // MSVC
+    *reinterpret_cast<U16*>(output) = _byteswap_ushort(*reinterpret_cast<const U16*>(input));
+#else
+#   error "Unknown compiler!"
+#endif
+}
+
+template <>
+inline void swapEndianness<4>(char* output, const char* input)
+{
+    // Accelerated 32-bit endianness swap
+
+#if defined(__GNUC__)
+    // GCC-like compiler
+    *reinterpret_cast<U32*>(output) = __builtin_bswap32(*reinterpret_cast<const U32*>(input));
+#elif defined(_MSC_VER)
+    // MSVC
+    *reinterpret_cast<U32*>(output) = _byteswap_long(*reinterpret_cast<const U32*>(input));
+#else
+#   error "Unknown compiler!"
+#endif
+}
+
+template <>
+inline void swapEndianness<8>(char* output, const char* input)
+{
+    // Accelerated 64-bit endianness swap
+
+#if defined(__GNUC__)
+    // GCC-like compiler
+    *reinterpret_cast<U64*>(output) = __builtin_bswap64(*reinterpret_cast<const U64*>(input));
+#elif defined(_MSC_VER)
+    // MSVC
+    *reinterpret_cast<U64*>(output) = _byteswap_uint64(*reinterpret_cast<const U64*>(input));
+#else
+#   error "Unknown compiler!"
+#endif
 }
 
 
