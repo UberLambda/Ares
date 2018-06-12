@@ -1,0 +1,3 @@
+#pragma once
+
+#cmakedefine ARES_PLATFORM_BIG_ENDIAN

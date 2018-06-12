@@ -1,5 +1,8 @@
 # Ares.Core - The engine core
 
+
+# ===== Source files and base build options/steps ==============================
+
 add_executable(Ares.Core WIN32
     Main.cc
     Task/TaskScheduler.cc
@@ -34,6 +37,19 @@ else()
     message("Stripping disabled, *NOT* stripping executables")
 endif()
 
+
+# ===== BuildConfig.h.in =======================================================
+
+include(TestBigEndian)
+test_big_endian(ARES_PLATFORM_BIG_ENDIAN)
+
+configure_file(BuildConfig.h.in "${CMAKE_CURRENT_BINARY_DIR}/Ares/BuildConfig.h"
+               ESCAPE_QUOTES
+               @ONLY
+               NEWLINE_STYLE UNIX)
+target_include_directories(Ares.Core PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
+
+# ===== BuildConfig.h.in =======================================================
 
 add_subdirectory(3rdparty/)
 target_link_libraries(Ares.Core PUBLIC
