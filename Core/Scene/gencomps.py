@@ -79,6 +79,7 @@ COMP_FIELD_TYPES = [
     'Vec4',
     'Mat3',
     'Mat4',
+    'Str16',
 ]
 
 # The regex scanner for a .comp file

@@ -55,8 +55,8 @@ target_include_directories(Ares.Core PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 find_package(PythonInterp 3.5 REQUIRED)
 add_custom_target(Ares.Core.gencomps
     COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/Scene/gencomps.py"
-                                 --indir "${CMAKE_CURRENT_SOURCE_DIR}/Scene/Comp/"
-                                 --outdir "${CMAKE_CURRENT_BINARY_DIR}/Ares/Comp/"
+                                 --indir "${CMAKE_CURRENT_SOURCE_DIR}/Scene/Comps/"
+                                 --outdir "${CMAKE_CURRENT_BINARY_DIR}/Ares/Comps/"
     COMMENT "Running gencomps"
 )
 add_dependencies(Ares.Core Ares.Core.gencomps)

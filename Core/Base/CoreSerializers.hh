@@ -5,6 +5,7 @@
 #include <Ares/BuildConfig.h>
 #include "NumTypes.hh"
 #include "LinTypes.hh"
+#include "KeyString.hh"
 
 // === Serializers for core types, that are mostly easy to serialize ===========
 
@@ -186,6 +187,43 @@ struct Serializer<std::string>
     }
 };
 
+template <U32 size>
+struct Serializer<KeyString<size>>
+{
+    inline static bool serialize(const KeyString<size>& value, std::ostream& stream)
+    {
+        // Serialize keystring length
+        Serializer<U32>::serialize(size, stream);
+
+        // Write keystring including null terminator
+        stream.write(value, size);
+
+        return bool(stream); // (`false` on error)
+    }
+
+    inline static bool deserialize(KeyString<size>& value, std::istream& stream)
+    {
+        // Check deserialized keystring length
+        U32 readSize = -1;
+        if(!Serializer<U32>::deserialize(readSize, stream) || readSize != size)
+        {
+            // Failed to read keystring length or length mismatch
+            return false;
+        }
+
+        // Deserialize keystring and check for final null terminator
+        char str[size];
+        stream.read(&str[0], size);
+        if(!stream || str[size - 1] != '\0')
+        {
+            // Failed to read string
+            return false;
+        }
+
+        value = str;
+        return true; // All good
+    }
+};
 
 // ===== Vec{2,3,4} ============================================================
 
