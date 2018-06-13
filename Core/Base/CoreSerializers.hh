@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <Ares/BuildConfig.h>
 #include "NumTypes.hh"
+#include "LinTypes.hh"
 
 // === Serializers for core types, that are mostly easy to serialize ===========
 
@@ -184,5 +185,69 @@ struct Serializer<std::string>
         return true; // All good
     }
 };
+
+
+// ===== Vec{2,3,4} ============================================================
+
+template <>
+struct Serializer<Vec2>
+{
+    inline static bool serialize(const Vec2& value, std::ostream& stream)
+    {
+        Serializer<F32>::serialize(value.x, stream);
+        Serializer<F32>::serialize(value.y, stream);
+        return bool(stream); // (`false` on error)
+    }
+
+    inline static bool deserialize(Vec2& value, std::istream& stream)
+    {
+        Serializer<F32>::deserialize(value.x, stream);
+        Serializer<F32>::deserialize(value.y, stream);
+        return bool(stream); // (`false` on error)
+    }
+};
+
+template <>
+struct Serializer<Vec3>
+{
+    inline static bool serialize(const Vec3& value, std::ostream& stream)
+    {
+        Serializer<F32>::serialize(value.x, stream);
+        Serializer<F32>::serialize(value.y, stream);
+        Serializer<F32>::serialize(value.z, stream);
+        return bool(stream); // (`false` on error)
+    }
+
+    inline static bool deserialize(Vec3& value, std::istream& stream)
+    {
+        Serializer<F32>::deserialize(value.x, stream);
+        Serializer<F32>::deserialize(value.y, stream);
+        Serializer<F32>::deserialize(value.z, stream);
+        return bool(stream); // (`false` on error)
+    }
+};
+
+template <>
+struct Serializer<Vec4>
+{
+    inline static bool serialize(const Vec4& value, std::ostream& stream)
+    {
+        Serializer<F32>::serialize(value.x, stream);
+        Serializer<F32>::serialize(value.y, stream);
+        Serializer<F32>::serialize(value.z, stream);
+        Serializer<F32>::serialize(value.w, stream);
+        return bool(stream); // (`false` on error)
+    }
+
+    inline static bool deserialize(Vec4& value, std::istream& stream)
+    {
+        Serializer<F32>::deserialize(value.x, stream);
+        Serializer<F32>::deserialize(value.y, stream);
+        Serializer<F32>::deserialize(value.z, stream);
+        Serializer<F32>::deserialize(value.w, stream);
+        return bool(stream); // (`false` on error)
+    }
+};
+
 
 }
