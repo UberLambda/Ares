@@ -19,6 +19,9 @@ public:
     /// on error (`entity` is out of bounds or no component to delete for `entity`).
     virtual bool erase(Entity entity) = 0;
 
+    /// Returns `true` if a component is currently stored for the given entity.
+    virtual bool has(Entity entity) const = 0;
+
     /// Returns `true` if no component for any entity is currently stored.
     virtual bool empty() const = 0;
 };
@@ -175,6 +178,13 @@ public:
             return false;
         }
     }
+
+    /// Returns `true` if a component is currently stored for the given entity.
+    inline bool has(Entity entity) const override
+    {
+        return entity <= lastSetEntity_ && compMap_[entity];
+    }
+
 
     /// Returns `true` if no component for any entity is currently stored.
     inline bool empty() const override
