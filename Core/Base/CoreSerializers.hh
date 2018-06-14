@@ -187,43 +187,49 @@ struct Serializer<std::string>
     }
 };
 
-template <U32 size>
-struct Serializer<KeyString<size>>
-{
-    inline static bool serialize(const KeyString<size>& value, std::ostream& stream)
-    {
-        // Serialize keystring length
-        Serializer<U32>::serialize(size, stream);
+#define ARES_implKeyStringSerializer(size) \
+    template <> \
+    struct Serializer<KeyString<size>> \
+    { \
+        inline static bool serialize(const KeyString<size>& value, std::ostream& stream) \
+        { \
+            /* Serialize keystring length */ \
+            Serializer<U32>::serialize(size, stream); \
+ \
+            /* Write keystring including null terminator*/ \
+            stream.write(value, size); \
+ \
+            return bool(stream); /* (`false` on error) */ \
+        } \
+ \
+        inline static bool deserialize(KeyString<size>& value, std::istream& stream) \
+        { \
+            /* Check deserialized keystring length */ \
+            U32 readSize = -1; \
+            if(!Serializer<U32>::deserialize(readSize, stream) || readSize != size) \
+            { \
+                /* Failed to read keystring length or length mismatch */ \
+                return false; \
+            } \
+ \
+            /* Deserialize keystring and check for final null terminator */ \
+            char str[size]; \
+            stream.read(&str[0], size); \
+            if(!stream || str[size - 1] != '\0') \
+            { \
+                /* Failed to read string */ \
+                return false; \
+            } \
+ \
+            value = str; \
+            return true; \
+        } \
+    };
 
-        // Write keystring including null terminator
-        stream.write(value, size);
-
-        return bool(stream); // (`false` on error)
-    }
-
-    inline static bool deserialize(KeyString<size>& value, std::istream& stream)
-    {
-        // Check deserialized keystring length
-        U32 readSize = -1;
-        if(!Serializer<U32>::deserialize(readSize, stream) || readSize != size)
-        {
-            // Failed to read keystring length or length mismatch
-            return false;
-        }
-
-        // Deserialize keystring and check for final null terminator
-        char str[size];
-        stream.read(&str[0], size);
-        if(!stream || str[size - 1] != '\0')
-        {
-            // Failed to read string
-            return false;
-        }
-
-        value = str;
-        return true; // All good
-    }
-};
+ARES_implKeyStringSerializer(4)
+ARES_implKeyStringSerializer(8)
+ARES_implKeyStringSerializer(16)
+ARES_implKeyStringSerializer(32)
 
 // ===== Vec{2,3,4} ============================================================
 

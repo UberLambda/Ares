@@ -29,7 +29,10 @@ struct CompField
         Vec4,
         Mat3,
         Mat4,
+        Str4,
+        Str8,
         Str16,
+        Str32,
     };
 
     KeyString<16> name; ///< The name of the field.
