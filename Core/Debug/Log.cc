@@ -29,10 +29,14 @@ void Log::removeSink(LogSink sink)
 }
 
 
-void Log::flush()
+void Log::flush(size_t count)
 {
+    // NOTE: `size_t(-1)` is a huge number, so you can just treat it as an upper
+    //       bound to conform to the specifications of this method
+
+    size_t nFlushed = 0;
     LogMessage* message;
-    while(messagesToFlush_.try_dequeue(message))
+    while(++nFlushed < count && messagesToFlush_.try_dequeue(message))
     {
 
         // Sink message to all sinks

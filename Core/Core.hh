@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <atomic>
 #include <memory>
+#include <vector>
 
 namespace Ares
 {
@@ -10,6 +11,7 @@ namespace Ares
 class TaskScheduler; // (#include "Task/TaskScheduler.hh"
 class Scene; // (#include "Scene/Scene.hh" )
 class Log; // (#include "Debug/Log.hh" )
+class Module; // (#include "Module/Module.hh" )
 
 /// An instance of Ares' engine core.
 class Core
@@ -24,9 +26,13 @@ class Core
 
 private:
     std::atomic<State> state_;
+
     std::unique_ptr<Log> log_;
     std::unique_ptr<TaskScheduler> scheduler_;
     std::unique_ptr<Scene> scene_;
+
+    std::vector<Module*> modules_;
+
 
     Core(const Core& toCopy) = delete;
     Core& operator=(const Core& toCopy) = delete;
@@ -34,15 +40,22 @@ private:
     Core(Core&& toMove) = delete;
     Core& operator=(Core&& toMove) = delete;
 
+
+    /// Attempts to `init()` a module for this core; returns `false` and logs
+    /// some information on error.
+    bool initModule(Module* module);
+
 public:
     /// Creates a new core instance, but does not initialize it; see `init()`.
     Core();
 
     /// Destroys the core instance, halting it beforehand if needed.
+    /// All modules that are still attached are `halt()`ed.
     ~Core();
 
 
-    /// Attempts to initialize the core; returns `false` on error.
+    /// Attempts to initialize the core, then all of the modules attached to it;
+    /// returns `false` on error.
     /// **Call this from the main thread!**
     /// On success, `state()` will switch to `Inited`.
     /// Does nothing and returns `true` if the core is already initalized.
@@ -69,6 +82,22 @@ public:
     {
         return state_;
     }
+
+
+    /// Attempts to attachs the module to the core. If the core is already inited
+    /// and/or running, also attempts to `init()` it after attaching it - logging
+    /// an error message on init error.
+    /// Returns `false` and does nothing if the module is already attached or
+    /// `module` is null.
+    /// **WARNING**: The module must stay valid for the entire lifetime of the
+    ///              `Core`, or atleast until it is detached!
+    bool attachModule(Module* module);
+
+    /// Attempts to `halt()` then detach the given module.
+    /// Returns `false` and does nothing on error (no such module attached/module
+    /// is null).
+    bool detachModule(Module* module);
+
 
 
     /// The core's log instance.

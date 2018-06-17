@@ -1,8 +1,10 @@
 #include "Core.hh"
 
+#include <algorithm>
 #include "Debug/Log.hh"
 #include "Task/TaskScheduler.hh"
 #include "Scene/Scene.hh"
+#include "Module/Module.hh"
 #include "CoreConfig.h"
 
 namespace Ares
@@ -19,8 +21,20 @@ Core::~Core()
     {
         halt();
     }
+    else if(state_ == Dead)
+    {
+        return;
+    }
 
     state_ = Dead;
+
+    log_->flush();
+
+    // Detach and halt all modules that are still attached to the core
+    for(Module* module : modules_)
+    {
+        detachModule(module);
+    }
 
     if(log_)
     {
@@ -86,6 +100,13 @@ bool Core::init()
 
     // TODO On error, print some description of it, flush the log, and return `false`
 
+    // [Re]initialize all modules that were attached to the core before it was
+    // `init()`ed
+    for(Module* module : modules_)
+    {
+        initModule(module);
+    }
+
     state_ = Inited;
     return true;
 }
@@ -105,24 +126,35 @@ bool Core::run()
     TaskVar frameVar{0};
     while(state_ == Running)
     {
-
-        // TODO: Schedule frame tasks here, put `frameVar` as var
-
-        // TODO: Do main thread stuff that HAS to be done once per frame here
-        // (poll events, swap buffers...)
-
-        // Do other, non-essential stuff that can be done while we wait for the
-        // frame tasks to finish; note that they could actually have finished
-        // already!
-        while(frameVar.load() != 0)
+        // Schedule the update tasks for each module that can run on worker
+        // threads; use `frameVar` as counter
+        for(Module* module : modules_)
         {
-            // TODO: Do something, don't spinlock
+            scheduler_->schedule(module->updateTask(*this), &frameVar);
         }
 
-        // Flush all of this frame's log messages here.
-        // No more messages can be enqueued until next frame, so this operation
-        // is guaranteed to finish at some point.
-        log_->flush();
+        // Update everything that has to be updated on the main thread for each
+        // module; in the meantime, the worker tasks scheduled earlier are being
+        // executed in the background...
+        for(Module* module : modules_)
+        {
+            module->mainUpdate(*this);
+        }
+
+        // TODO: Do main thread stuff that HAS to be done once per frame here
+        // (core file I/O, ...)
+
+        // Flush a bunch of this frame's log messages here.
+        // This amount of messages to be flushed should be enough to make sure
+        // that the message buffer is always empty afterwards (so that we don't
+        // run out of log messages in the log's message pool...)
+        log_->flush(ARES_CORE_LOG_MESSAGE_POOL_CAPACITY);
+
+        // Wait for all module update tasks to finish...
+        while(frameVar.load() != 0)
+        {
+            // TODO: Do something more useful, don't just spinlock
+        }
     }
 
     ARES_log(*log_, Info, "Done running");
@@ -134,6 +166,56 @@ void Core::halt()
 {
     auto nextState = state_ != Dead ? Inited : Dead;
     state_ = nextState;
+}
+
+
+bool Core::initModule(Module* module)
+{
+    if(module->init(*this))
+    {
+        ARES_log(*log_, Trace,
+                 "Attaching module @%p", module);
+        return true;
+    }
+    else
+    {
+        ARES_log(*log_, Error,
+                 "Failed to attach module @%p, initalization error!", module);
+        return false;
+    }
+}
+
+bool Core::attachModule(Module* module)
+{
+    if(!module || std::find(modules_.begin(), modules_.end(), module) != modules_.end())
+    {
+        return false;
+    }
+
+    if(state_ != Dead)
+    {
+        // Core already inited/running, initialize module here
+        (void)initModule(module); // (may fail, logs errors)
+    }
+
+    modules_.push_back(module);
+    return true;
+}
+
+bool Core::detachModule(Module* module)
+{
+    auto it = std::find(modules_.begin(), modules_.end(), module);
+    if(it == modules_.end())
+    {
+        return false;
+    }
+
+    ARES_log(*log_, Trace,
+             "Halting and detaching module @%p", *it);
+
+    (*it)->halt(*this);
+    modules_.erase(it);
+    return true;
 }
 
 }

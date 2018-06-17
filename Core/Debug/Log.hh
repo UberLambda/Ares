@@ -162,13 +162,18 @@ public:
     void removeSink(LogSink sink);
 
 
-    /// Flushes all messages enqueued inbetween this and the latest `flush()` call,
-    /// actually sending them to the log streams.
+    /// Flushes messages enqueued before this `flush()` call, actually sending
+    /// them to the log streams. If count is `size_t(-1)`, messages are flushed
+    /// until there are no more in the queue; **in some situations, this goes on
+    /// forever** as messages are enqueued by other thread as this thread is
+    /// flushing them! To prevent an infinite loop, if `count` is any other number
+    /// at most `count` messages are flushed, leaving the rest in the queue to be
+    /// flushed later.
     ///
     /// This is *NOT* guaranteed to be threadsafe, but in any case while messages
     /// can be `log()`ged by any thread concurrently, they should be periodically
     /// `flush()`ed by a single "logger I/O thread".
-    void flush();
+    void flush(size_t count=-1);
 };
 
 /// A convenience macro that `log()`s a [un]formatted message coming from the
