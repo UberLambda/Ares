@@ -4,7 +4,7 @@
 # ===== Source files and base build options/steps ==============================
 
 add_executable(Ares.Core WIN32
-    Main.cc
+    Main.cc Core.cc
     Task/TaskScheduler.cc
     Data/FileIO.cc
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
