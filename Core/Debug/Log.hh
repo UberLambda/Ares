@@ -176,6 +176,6 @@ public:
 /// Example: `ARES_log(myLog, Info, "Could not find %s", "shrubberies")` in
 ///           Main.cc at line 9 would expand to `myLog.log(Info, "Main.cc", 9,
 ///           "Could not find %s", "shrubberies")`.
-#define ARES_log(log, level, ...) log.log(level, __FILE__, __LINE__, __VA_ARGS__)
+#define ARES_log(log_, level, ...) (log_).log((level), __FILE__, __LINE__, __VA_ARGS__)
 
 }
