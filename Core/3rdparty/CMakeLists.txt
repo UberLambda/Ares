@@ -44,11 +44,8 @@ set(OpenGL_GL_PREFERENCE "LEGACY")
 find_package(OpenGL 1.1 REQUIRED)
 
 add_library(flextgl STATIC flextgl/flextGL.c)
-target_include_directories(flextgl PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/flextgl/"
-    "${CMAKE_CURRENT_SOURCE_DIR}/glfw/include/"
-)
-target_link_libraries(flextgl PUBLIC ${OPENGL_gl_LIBRARY})
+target_include_directories(flextgl PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/flextgl/")
+target_link_libraries(flextgl PUBLIC ${OPENGL_gl_LIBRARY} glfw)
 
 # == tinyformat
 # == Upstream: https://github.com/c42f/tinyformat [in-tree]
