@@ -4,6 +4,7 @@
 #include <atomic>
 #include <memory>
 #include <vector>
+#include <utility>
 
 namespace Ares
 {
@@ -116,6 +117,49 @@ public:
     inline Scene& scene()
     {
         return *scene_;
+    }
+};
+
+/// An utility class that will `detachModule()` and `delete` a module when the
+/// object goes out of scope.
+class AutoDetach
+{
+    Core* core_;
+    Module* module_;
+
+    AutoDetach(const AutoDetach& toCopy) = delete;
+    AutoDetach& operator=(const AutoDetach& toCopy) = delete;
+
+public:
+    AutoDetach(Core& core, Module* module)
+        : core_(&core), module_(module)
+    {
+    }
+
+    AutoDetach(AutoDetach&& toMove)
+    {
+        (void)operator=(std::move(toMove));
+    }
+    AutoDetach& operator=(AutoDetach&& toMove)
+    {
+        // Destroy any old module
+        this->~AutoDetach();
+
+        // Move data over
+        this->core_ = toMove.core_;
+        this->module_ = toMove.module_;
+
+        // Invalidate the moved instance
+        toMove.module_ = nullptr;
+
+        return *this;
+    }
+
+    ~AutoDetach();
+
+    inline operator Module*()
+    {
+        return module_;
     }
 };
 

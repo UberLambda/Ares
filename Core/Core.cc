@@ -218,4 +218,15 @@ bool Core::detachModule(Module* module)
     return true;
 }
 
+
+AutoDetach::~AutoDetach()
+{
+    if(module_)
+    {
+        core_->detachModule(module_);
+        delete module_; module_ = nullptr;
+    }
+}
+
+
 }

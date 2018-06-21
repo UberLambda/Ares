@@ -3,6 +3,8 @@
 #include "Base/Platform.h"
 #include "Base/Utils.hh"
 
+#include "Gfx/GfxModule.hh"
+
 using namespace Ares;
 
 
@@ -18,6 +20,8 @@ static Core core;
 
 /// Set to the signal caught by the signal handler.
 static std::atomic<int> caughtSignal{INT_MAX};
+static std::atomic<unsigned int> nSignalsCatches{0};
+static constexpr const unsigned int MAX_N_SIGNAL_CATCHES = 10;
 
 static void signalHandler(int signal)
 {
@@ -26,6 +30,15 @@ static void signalHandler(int signal)
         // A signal was already caught; do not attempt to do anything else.
         // This is to make sure that this handler does not cause other signals
         // to be raised, causing a potentially infinite recursion.
+
+        if(++nSignalsCatches > MAX_N_SIGNAL_CATCHES)
+        {
+            // Signals keep getting caught but the main loop does not terminate,
+            // we're stuck here! `abort()` the program without even trying to
+            // cleanup
+            abort();
+        }
+
         return;
     }
 
@@ -75,6 +88,12 @@ int main(int argc, char** argv)
 
     core.log().flush();
 #endif
+
+    // Add modules
+    AutoDetach gfxModule(core, new GfxModule());
+    core.attachModule(gfxModule);
+
+    core.log().flush();
 
     // Main loop, run on main thread. This will return only when the main loop is
     // done.

@@ -10,6 +10,7 @@ add_executable(Ares.Core WIN32
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
     Debug/Log.cc
     Scene/Scene.cc
+    Gfx/GfxModule.cc
 )
 set_target_properties(Ares.Core PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/build/"
