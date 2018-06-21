@@ -12,14 +12,6 @@ namespace Ares
 /// A rendering and input context.
 class Window
 {
-    struct Impl;
-    Impl* impl_;
-
-    AxisMap axisMap_;
-
-    Window(const Window& toCopy) = delete;
-    Window& operator=(const Window& toCopy) = delete;
-
 public:
     /// The graphics API to use.
     enum Api
@@ -28,7 +20,17 @@ public:
         VK11, ///< Vulkan 1.1
     };
 
+private:
+    struct Impl;
+    Impl* impl_;
+    Api api_;
 
+    AxisMap axisMap_;
+
+    Window(const Window& toCopy) = delete;
+    Window& operator=(const Window& toCopy) = delete;
+
+public:
     /// Creates a new Window object, but does not initialize it.
     Window();
 

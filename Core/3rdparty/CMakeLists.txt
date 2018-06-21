@@ -33,6 +33,14 @@ add_library(vulkan INTERFACE)
 target_include_directories(vulkan INTERFACE ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(vulkan INTERFACE ${Vulkan_LIBRARIES})
 
+# == OpenGL (libGL) 3.3+
+# == Upstream: https://www.khronos.org/opengl/ [imported via find script]
+# == License: N/A
+find_package(OpenGL 3.3 REQUIRED)
+add_library(opengl INTERFACE)
+target_include_directories(opengl INTERFACE ${OPENGL_INCLUDE_DIR})
+target_link_libraries(opengl INTERFACE ${OPENGL_gl_LIBRARY})
+
 # == tinyformat
 # == Upstream: https://github.com/c42f/tinyformat [in-tree]
 # == License: Boost 1.0

@@ -39,6 +39,7 @@ Window::Window()
 }
 
 Window::Window(Api api, VideoMode videoMode, const std::string& title)
+    : api_(api)
 {
     if(!GLFW::instance())
     {
@@ -66,6 +67,7 @@ Window::Window(Api api, VideoMode videoMode, const std::string& title)
             return;
         }
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API); // No [E]GL[ES] context required
+    break;
     }
 
 
@@ -111,6 +113,7 @@ Window& Window::operator=(Window&& toMove)
 {
     // Move data over
     impl_ = toMove.impl_;
+    api_ = toMove.api_;
 
     // Invalidate moved instance
     toMove.impl_ = nullptr;
@@ -242,7 +245,11 @@ VkResult Window::createVulkanSurface(VkSurfaceKHR& surface, VkInstance instance,
 void Window::beginFrame()
 {
     ARES_windowAssertOk();
-    // FIXME Make context current if OpenGL
+
+    if(api_ == GL33)
+    {
+        glfwMakeContextCurrent(impl_->window);
+    }
 }
 
 void Window::endFrame()
