@@ -38,6 +38,7 @@ public:
     /// and title and then changes video mode and title accordingly.
     /// Check `operator bool()` to see if initialization succeeded.
     /// **WARNING** if GLFW: Needs to be called from the main thread!
+    /// **NOTE** if GLFW: This will initialize flextGL.
     Window(Api api, VideoMode videoMode, const std::string& title);
 
     Window(Window&& toMove);

@@ -2,7 +2,7 @@
 
 #include "Axis.hh"
 #include <vulkan/vulkan.h>
-#include <GL/gl.h>
+#include <flextGL.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 

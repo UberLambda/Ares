@@ -75,6 +75,6 @@ target_link_libraries(Ares.Core PUBLIC
     boost_context
     concurrentqueue
     vulkan
-    opengl
+    flextgl
     tinyformat
 )

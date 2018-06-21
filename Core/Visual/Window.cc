@@ -70,7 +70,6 @@ Window::Window(Api api, VideoMode videoMode, const std::string& title)
     break;
     }
 
-
     impl_->window = glfwCreateWindow(800, 600, "Ares", nullptr, nullptr);
     if(!impl_->window)
     {
@@ -78,6 +77,26 @@ Window::Window(Api api, VideoMode videoMode, const std::string& title)
         delete impl_; impl_ = nullptr;
         return;
     }
+
+    switch(api)
+    {
+    case GL33:
+        // Load flextGL
+        glfwMakeContextCurrent(impl_->window); //< IMPORTANT, otherwise flextGL
+                                               // will not load function pointers!!
+        if(!flextInit(impl_->window))
+        {
+            // Error initializing flextGL
+            delete impl_; impl_ = nullptr;
+            return;
+        }
+    break;
+
+    default:
+        // Vulkan, nothing to od
+    break;
+    }
+
 
     // Register callbacks; window user data will be `impl_`
     glfwSetWindowUserPointer(impl_->window, impl_);
