@@ -133,16 +133,17 @@ public:
         // FIXME UNDECIDED Maybe just drop some messages instead of crashing the
         //                 program if the pool is full?
 
-        // Fill message, formatting `contentFmt` to `message->content`
+        // Reset message contents and fill message, formatting `contentFmt` to
+        // `message->content`
         message->level = level;
         message->sourceFile = sourceFile;
         message->sourceLine = sourceLine;
+        memset(message->content, '\0', LogMessage::MAX_CONTENT_SIZE);
 
         MemStreambuf messageBuf(message->content, LogMessage::MAX_CONTENT_SIZE);
         std::ostream messageStream(&messageBuf);
         tinyformat::format(messageStream,
                            contentFmt, std::forward<FmtArgs>(contentFmtArgs)...);
-        message->content[LogMessage::MAX_CONTENT_SIZE - 1] = '\0'; // Make sure content is null-terminated
 
         // Put message into flushing queue [atomic operation]
         messagesToFlush_.enqueue(message);
