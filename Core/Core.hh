@@ -12,6 +12,8 @@ namespace Ares
 class TaskScheduler; // (#include "Task/TaskScheduler.hh"
 class Scene; // (#include "Scene/Scene.hh" )
 class Log; // (#include "Debug/Log.hh" )
+class FileStore; // (#include "Data/FileStore.hh" )
+class ResourceLoader; // (#include "Data/ResourceLoader.hh" )
 class Module; // (#include "Module/Module.hh" )
 
 /// An instance of Ares' engine core.
@@ -31,6 +33,8 @@ private:
     std::unique_ptr<Log> log_;
     std::unique_ptr<TaskScheduler> scheduler_;
     std::unique_ptr<Scene> scene_;
+    std::unique_ptr<FileStore> fileStore_;
+    std::unique_ptr<ResourceLoader> resourceLoader_;
 
     std::vector<Module*> modules_;
 
@@ -117,6 +121,12 @@ public:
     inline Scene& scene()
     {
         return *scene_;
+    }
+
+    /// The core's resource loader.
+    inline ResourceLoader& resourceLoader()
+    {
+        return *resourceLoader_;
     }
 };
 

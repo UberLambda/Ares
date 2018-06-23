@@ -4,6 +4,8 @@
 #include "Debug/Log.hh"
 #include "Task/TaskScheduler.hh"
 #include "Scene/Scene.hh"
+#include "Data/FolderFileStore.hh"
+#include "Data/ResourceLoader.hh"
 #include "Module/Module.hh"
 #include "CoreConfig.h"
 
@@ -35,6 +37,12 @@ Core::~Core()
     {
         detachModule(module);
     }
+
+    // Free all resources still in the loader
+    size_t nCleanedRes = resourceLoader_->cleanup();
+    ARES_log(*log_, Debug,
+             "ResourceLoader: %lu resources still loaded on shutdown, cleaned up",
+             nCleanedRes);
 
     if(log_)
     {
@@ -96,6 +104,16 @@ bool Core::init()
         ARES_log(*log_, Debug,
                  "Scene: %lu entities maximum", maxEntities);
         scene_.reset(new Scene(ARES_CORE_SCENE_ENTITY_CAPACITY));
+    }
+
+    // Resource loader
+    {
+        // TODO IMPORTANT Use an archive format/a PhysFS-like `FileStore` instead of raw files!
+        Path rootAssetPath = ".";
+        ARES_log(*log_, Debug,
+                 "FileStore: FolderFileStore(root=\"%s\")", rootAssetPath);
+        fileStore_.reset(new FolderFileStore(rootAssetPath));
+        resourceLoader_.reset(new ResourceLoader(fileStore_.get()));
     }
 
     // TODO On error, print some description of it, flush the log, and return `false`
