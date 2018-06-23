@@ -235,9 +235,9 @@ public:
     ///
     /// Thread safe, but **not** lockless! This function is to be used sparingly,
     /// and not for being used in a critical path.
-    inline const T* operator*() const
+    inline const T* operator->() const
     {
-        if(parent_ == nullptr || !handle_)
+        if(parent_ == nullptr || handle_ == -1)
         {
             return nullptr;
         }
@@ -247,15 +247,22 @@ public:
         auto it = parent_->resMap_.find(handle_);
         if(it != parent_->resMap_.end())
         {
-            // HACK A `TResHolder` only has one item, a bare `T`, inside it
-            //      Casting the whole `TResHolder` to `T` should always work; the
-            //      pointer will point to `t` inside of the `TResHolder`!
-            return reinterpret_cast<T*>(it->second.resource);
+            // HACK The resource should always be a `T`, so we can upcast
+            //      a `ResHolderBase` to a `TResHolder<T>` with a reinterpret cast
+            //      here
+            using TResHolder = ResourceLoader::TResHolder<T>;
+            return &reinterpret_cast<TResHolder*>(it->second.resource)->t;
         }
         else
         {
             return nullptr;
         }
+    }
+
+    /// See `operator->()`.
+    inline const T& operator*() const
+    {
+        return *operator->();
     }
 
     /// Returns a pointer to thre parent resource loader, or null if the reference
