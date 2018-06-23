@@ -1,31 +1,18 @@
 #pragma once
 
 #include "../Base/NumTypes.hh"
-#include "../Base/KeyString.hh"
 
 namespace Ares
 {
 
-/// An handle to a particular resource in a `ResourcePack`.
-struct ResourceHandle
-{
-    /// The type of resource ("texture", "audio"...).
-    KeyString<8> type{};
-
-    /// The id of this particular resource, unique for each type.
-    U32 id = -1;
-
-
-    /// Returns `true` if the given handle is valid (valid type string + valid id).
-    inline operator bool() const
-    {
-        return type.hash() != 0 && id != U32(-1);
-    }
-
-    inline bool operator==(const ResourceHandle& other) const
-    {
-        return type == other.type && id == other.id;
-    }
-};
+/// An handle to a particular resource of type `T` from a `ResourceLoader`.
+/// `ResourceHandle<T>(-1)` means "invalid handle".
+///
+/// Resource handles are globally unique for a `ResourceLoader`. This means that
+/// handles for different resources will always be different, even among different
+/// types, and that if a resource is fully unloaded and then reloaded again it
+/// will get a new handle.
+template <typename T>
+using ResourceHandle = U32;
 
 }

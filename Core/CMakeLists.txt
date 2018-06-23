@@ -6,7 +6,7 @@
 add_executable(Ares.Core WIN32
     Main.cc Core.cc
     Task/TaskScheduler.cc
-    Data/FileIO.cc
+    Data/FileIO.cc Data/ResourceLoader.cc
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
     Debug/Log.cc
     Scene/Scene.cc
