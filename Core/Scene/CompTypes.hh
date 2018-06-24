@@ -26,7 +26,7 @@ using Str16 = KeyString<16>;
 using Str32 = KeyString<32>;
 
 template <typename T>
-class ResourceRef; // (#include "../Data/ResourceLoader.hh")
+class ResourceRef; // (#include "../Data/ResourceRef.hh")
 
 /// Alias of `ResourceRef<T>`, used for `Comp` fields.
 template <typename T>

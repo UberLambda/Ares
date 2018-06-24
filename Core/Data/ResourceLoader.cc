@@ -1,6 +1,7 @@
 #include "ResourceLoader.hh"
 
 #include <assert.h>
+#include "ResourceRef.hh"
 
 namespace Ares
 {

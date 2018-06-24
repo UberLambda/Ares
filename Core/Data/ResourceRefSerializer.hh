@@ -3,6 +3,8 @@
 #include "../Base/Serializer.hh"
 #include "../Base/CoreSerializers.hh"
 
+// (#include "ResourceRef.hh" before including this file)
+
 namespace Ares
 {
 
