@@ -3,7 +3,6 @@
 #include "../Base/NumTypes.hh"
 #include "../Base/LinTypes.hh"
 #include "../Base/KeyString.hh"
-#include "../Data/ResourceHandle.hh"
 
 namespace Ares
 {
@@ -26,9 +25,12 @@ using Str16 = KeyString<16>;
 /// Alias of `KeyString<32>`, used for `Comp` fields.
 using Str32 = KeyString<32>;
 
-/// Alias of `ResourceHandle<T>`, used for `Comp` fields.
 template <typename T>
-using Res = ResourceHandle<T>;
+class ResourceRef; // (#include "../Data/ResourceLoader.hh")
+
+/// Alias of `ResourceRef<T>`, used for `Comp` fields.
+template <typename T>
+using Res = ResourceRef<T>;
 
 }
 

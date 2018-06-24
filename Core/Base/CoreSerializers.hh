@@ -6,6 +6,7 @@
 #include "NumTypes.hh"
 #include "LinTypes.hh"
 #include "KeyString.hh"
+#include "Utils.hh"
 
 // === Serializers for core types, that are mostly easy to serialize ===========
 

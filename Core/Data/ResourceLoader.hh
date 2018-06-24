@@ -172,11 +172,15 @@ public:
     size_t cleanup();
 };
 
+template <typename T>
+class Serializer; // (#include "Base/Serializer.hh"
+                  //  `Serializer<ResourceRef<T>>` is implemented in "ResourceRefSerializer.hh")
 
 template <typename T>
 class ResourceRef
 {
     friend class ResourceLoader;
+    friend class Serializer<ResourceRef<T>>;
 
     ResourceLoader* parent_;
     ResourceHandle<T> handle_;
