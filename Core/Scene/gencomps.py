@@ -83,6 +83,7 @@ COMP_FIELD_TYPES = [
     'Str8',
     'Str16',
     'Str32',
+    'Res<[A-Z][A-Za-z0-9]*>',
 ]
 
 # The regex scanner for a .comp file

@@ -8,35 +8,8 @@ namespace Ares
 /// The field of a component for reflection. See `CompMeta`.
 struct CompField
 {
-    /// The datatype of the field.
-    /// Each enum entry's name correspond to a valid Ares type.
-    enum Type
-    {
-        I8,
-        I16,
-        I32,
-        I64,
-        U8,
-        U16,
-        U32,
-        U64,
-        F32,
-        F64,
-        Bool,
-        Char,
-        Vec2,
-        Vec3,
-        Vec4,
-        Mat3,
-        Mat4,
-        Str4,
-        Str8,
-        Str16,
-        Str32,
-    };
-
     KeyString<16> name; ///< The name of the field.
-    Type type; ///< The datatype of the field.
+    KeyString<16> type; ///< The datatype of the field.
     const char* descr=nullptr; ///< The description of the field. May be null.
 };
 
