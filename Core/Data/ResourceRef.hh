@@ -29,6 +29,13 @@ class ResourceRef
     }
 
 public:
+    /// Creates a new uninitialized and invalid resource handle.
+    ResourceRef()
+        : parent_(nullptr), handle_(-1)
+    {
+    }
+
+
     ResourceRef(ResourceRef&& toMove)
     {
         (void)operator=(std::move(toMove));
