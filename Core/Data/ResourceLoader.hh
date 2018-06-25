@@ -1,6 +1,7 @@
 #pragma once
 
 #include <istream>
+#include <sstream>
 #include <unordered_map>
 #include <utility>
 #include <type_traits>
@@ -90,11 +91,12 @@ public:
     ~ResourceLoader();
 
     /// Attempts to parse and load a resource of type `T` in memory.
+    /// Returns a non-empty `ErrString` on error, leaving `outRef` unchanged.
     ///
     /// Thread safe, but **not** lockless! This function is to be used sparingly
     /// at startup, not for being used in a critical path.
     template <typename T>
-    ResourceRef<T> load(const Path& resPath)
+    ErrString load(ResourceRef<T>& outRef, const Path& resPath)
     {
         // Find wether the resource is already loaded or not; if it is, increment
         // its reference count and return a new reference to it
@@ -106,7 +108,8 @@ public:
             {
                 LoadedResource& res = resMap_[it->second];
                 res.refCount ++;
-                return ResourceRef<T>(this, {it->second});
+                outRef = ResourceRef<T>(this, {it->second});
+                return ErrString(); // (no error)
             }
         }
 
@@ -117,8 +120,9 @@ public:
         auto stream = fileStore_->getStream(resPath); // (assumed to be threadsafe)
         if(!stream)
         {
-            // Fail: filestore could not find file
-            return ResourceRef<T>{nullptr};
+            std::ostringstream errStr;
+            errStr << "Filestore could not find resource file: " << resPath;
+            return errStr.str();
         }
 
         const char* fileExt = resPath.extension();
@@ -126,12 +130,15 @@ public:
         // TODO Allocate resource in a contiguous memory region, not scattering
         //      them on the heap!
         auto resource = new TResHolder<T>();
-        bool ok = ResourceParser<T>::parse(resource->t, *stream, fileExt);
+        ErrString parsingErr = ResourceParser<T>::parse(resource->t, *stream, fileExt);
 
         fileStore_->freeStream(stream); // (assumed to be threadsafe)
 
-        if(ok)
+        if(!parsingErr)
         {
+            // FIXME May potentially deadlock if `pathMapLock_` and/or `resMapLock_`
+            //       is locked somewhere else! Maybe merge the two locks into a single one?
+
             // Resource loaded; mark its `path -> handle` relationship on `pathMap_`,
             // then put the resource on `resMap_`; return a handle with refcount 1
             pathMapLock_.lock();
@@ -144,13 +151,16 @@ public:
             res.resource = resource;
             resMapLock_.unlock();
 
-            return ResourceRef<T>{this, {resId}};
+            outRef = ResourceRef<T>{this, {resId}};
+            return ErrString(); // (no error)
         }
         else
         {
-            // Fail: resource stream could not be parsed to a resource
             delete resource;
-            return ResourceRef<T>{nullptr};
+
+            std::ostringstream errStr;
+            errStr << "Resource stream could not be parsed to a resource: " << parsingErr;
+            return errStr.str();
         }
     }
 
