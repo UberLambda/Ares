@@ -67,6 +67,8 @@ public:
         {
             parent_->incRefCount(handle_);
         }
+
+        return *this;
     }
 
     /// (Decrements the reference count by 1; locks parent to do so)
