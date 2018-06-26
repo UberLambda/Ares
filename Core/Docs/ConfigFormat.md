@@ -32,9 +32,11 @@ One of:
 
 - Integer; maps to `ConfigValue::I64`.  
   Can start with a `+` or `-` sign. `_` characters in the number are ignored.
+  Leading zeroes are ignored.
 
 - Float; maps to `ConfigValue::F64`.  
   Same as integer, but contains a `.` (decimal separator) character somewhere.
+  Leading zeroes in the whole part are ignored.
 
 - Boolean; maps to `ConfigValue::Boolean`.  
   Either (`T` | `t`) or (`F` | `f`)
