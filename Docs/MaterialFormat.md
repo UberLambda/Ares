@@ -12,18 +12,16 @@ Describes common properties of the material.
 | name | string | **Yes** | A short name for the material. |
 | descr | string | No | A short description of the material. |
 
-## [shaders.<api>] section[s]
+## [shaders] section
 **Required?** No
 
-Used to store shaders or references to shaders to use to render the material on a certain graphics API.  
-<api> should be one of:
-
-- `gl33`: OpenGL 3.3 core (`#version 330 core`)
-
-Unrecognized <api>s are ignored.
+Used to store shaders or references to the shader program used to render the material.
+Shaders use GLSL 330 core syntax.  
+If the whole section or any of the shader sources are missing defaults are used
+in their place.
 
 | Key | Type | Required? | Description |
 |:-:|:-:|:-:|:-:|
-| vertSrc | string | No | The source code of a vertex shader for the given API. |
-| fragSrc | string | No | The source code of a fragment shader for the given API. |
-| geomSrc | string | No | The source code of a geometry shader for the given API. |
+| vertSrc | string | No | The source code of the vertex shader. |
+| fragSrc | string | No | The source code of the fragment shader. |
+| geomSrc | string | No | The source code of the geometry shader. |
