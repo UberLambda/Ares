@@ -66,6 +66,22 @@ public:
     {
         return str_;
     }
+
+
+    /// Returns an error string that is a concatenation of the two given ones.
+    inline ErrString operator+(const ErrString& other) const
+    {
+        ErrString sum(str_);
+        sum.str_ += other.str_;
+        return sum;
+    }
+
+    /// See `operator+()`.
+    inline ErrString& operator+=(const ErrString& other)
+    {
+        str_ += other.str_;
+        return *this;
+    }
 };
 
 
@@ -73,6 +89,5 @@ inline std::ostream& operator<<(std::ostream& stream, const ErrString& error)
 {
     return stream << (error ? error.str() : "<no error>");
 }
-
 
 }
