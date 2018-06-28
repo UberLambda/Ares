@@ -56,7 +56,7 @@ int main(int argc, char** argv)
         // Core initialization error
         // TODO Show a message box to inform the user of this
         // The core's log will print and flush appropriate error messages; just exit here
-        return -1;
+        return EXIT_FAILURE;
     }
 
 #if ARES_PLATFORM_IS_POSIX
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 
     // Main loop, run on main thread. This will return only when the main loop is
     // done.
-    core.run();
+    bool runOk = core.run();
 
 #if ARES_PLATFORM_IS_POSIX
     if(caughtSignal != INT_MAX)
@@ -135,5 +135,5 @@ int main(int argc, char** argv)
     ARES_log(core.log(), Info, "Shutdown");
     core.log().flush();
 
-    return 0;
+    return runOk ? EXIT_SUCCESS : EXIT_FAILURE;
 }

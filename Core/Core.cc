@@ -116,13 +116,15 @@ bool Core::init()
         resourceLoader_.reset(new ResourceLoader(fileStore_.get()));
     }
 
-    // TODO On error, print some description of it, flush the log, and return `false`
-
     // [Re]initialize all modules that were attached to the core before it was
     // `init()`ed
     for(Module* module : modules_)
     {
-        initModule(module);
+        if(!initModule(module))
+        {
+            // The initialization of a module failed
+            return false;
+        }
     }
 
     state_ = Inited;
