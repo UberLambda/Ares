@@ -90,6 +90,7 @@ public:
                   unsigned int nFibers=200, size_t fiberStackSize=128*1024);
     ~TaskScheduler();
 
+
     /// Schedules the given tasks for [later] execution. If `var` is not null,
     /// increments `var` by `n` beforehand (see: `waitFor()`).
     void schedule(const Task* tasks, size_t n, TaskVar* var=nullptr);
@@ -102,6 +103,26 @@ public:
     /// the task running on the local thread is suspended and other ones are
     /// executed while waiting (so that CPU cycles are not wasted busy-waiting).
     void waitFor(TaskVar& var, TaskVarValue target=0);
+
+
+    /// Returns the number of worker threads for this scheduler.
+    inline unsigned int nWorkers() const
+    {
+        return nWorkers_;
+    }
+
+    /// Returns the number of fibers in the fiber pool of this scheduler.
+    inline unsigned int nFibers() const
+    {
+        return nFibers_;
+    }
+
+    /// Returns the size in bytes of the stack of each fiber in the fiber pool of this
+    /// scheduler.
+    inline unsigned int fiberStackSize() const
+    {
+        return fiberStacks_.stackSize();
+    }
 };
 
 }

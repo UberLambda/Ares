@@ -84,6 +84,11 @@ public:
     Log(size_t messagePoolSize=1024);
     ~Log();
 
+    /// Returns the size of the log's internal message pool size.
+    inline size_t messagePoolSize() const
+    {
+        return messagePool_.n();
+    }
 
     /// Commits an unformatted message to the log. See the documentation of
     /// `LogMessage` for a description of the parameters. Note that message contents

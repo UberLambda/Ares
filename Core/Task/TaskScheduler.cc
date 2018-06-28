@@ -13,7 +13,7 @@ unsigned int TaskScheduler::optimalNWorkers()
 
 
 TaskScheduler::TaskScheduler(unsigned int nWorkers, unsigned int nFibers, size_t fiberStackSize)
-    : nWorkers_(nWorkers),
+    : nWorkers_(nWorkers), nFibers_(nFibers),
       fiberStacks_(nFibers, fiberStackSize)
 {
     workers_ = new std::thread[nWorkers_];

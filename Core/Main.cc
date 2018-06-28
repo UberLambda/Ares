@@ -59,6 +59,8 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    Log& log = *core.log();
+
 #if ARES_PLATFORM_IS_POSIX
     static constexpr const int signalsToCatch[] =
     {
@@ -72,7 +74,7 @@ int main(int argc, char** argv)
         SIGSYS, // (illegal syscall)
     };
 
-    ARES_log(core.log(), Trace, "POSIX: Registering signal handlers");
+    ARES_log(log, Trace, "POSIX: Registering signal handlers");
     for(int signalToCatch : signalsToCatch)
     {
         struct sigaction action;
@@ -80,20 +82,20 @@ int main(int argc, char** argv)
         action.sa_handler = signalHandler;
         if(sigaction(signalToCatch, &action, nullptr) != 0)
         {
-            ARES_log(core.log(), Error,
+            ARES_log(log, Error,
                      "POSIX: Failed to register handler for signal %d [%s]",
                      signalToCatch, strsignal(signalToCatch));
         }
     }
 
-    core.log().flush();
+    log.flush();
 #endif
 
     // Add modules
     AutoDetach gfxModule(core, new GfxModule());
     core.attachModule(gfxModule);
 
-    core.log().flush();
+    core.log()->flush();
 
     // Main loop, run on main thread. This will return only when the main loop is
     // done.
@@ -108,21 +110,21 @@ int main(int argc, char** argv)
         {
         case SIGINT:
         case SIGTERM:
-            ARES_log(core.log(), Info,
+            ARES_log(log, Info,
                      "SignalHandler: Caught signal %d [%s]",
                      sig, strsignal(sig));
             doAbort = false;
         break;
 
         default:
-            ARES_log(core.log(), Fatal,
+            ARES_log(log, Fatal,
                      "SignalHandler: Caught signal %d [%s], aborting!",
                      sig, strsignal(sig));
             doAbort = true;
         break;
         }
 
-        core.log().flush();
+        log.flush();
 
         if(doAbort)
         {
@@ -132,8 +134,8 @@ int main(int argc, char** argv)
     }
 #endif
 
-    ARES_log(core.log(), Info, "Shutdown");
-    core.log().flush();
+    ARES_log(log, Info, "Shutdown");
+    log.flush();
 
     return runOk ? EXIT_SUCCESS : EXIT_FAILURE;
 }

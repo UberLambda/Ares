@@ -13,7 +13,8 @@ namespace Ares
 {
 
 Core::Core()
-    : state_(Dead)
+    : state_(Dead),
+      log_(nullptr), scheduler_(nullptr), scene_(nullptr), resourceLoader_(nullptr)
 {
 }
 
@@ -38,19 +39,16 @@ Core::~Core()
         detachModule(module);
     }
 
-    // Free all resources still in the loader
-    size_t nCleanedRes = resourceLoader_->cleanup();
-    ARES_log(*log_, Debug,
-             "ResourceLoader: %lu resources still loaded on shutdown, cleaned up",
-             nCleanedRes);
-
     if(log_)
     {
         // Perform one final log flush
         log_->flush();
     }
 
-    // Smart pointers will free all resources
+    // `~FacilitySlot<T>()` invocations will free all resources, but need to mark
+    // the alias pointers as now invalid
+    log_ = nullptr;
+    scheduler_ = nullptr;
 }
 
 
@@ -74,46 +72,70 @@ bool Core::init()
         return true;
     }
 
+    // Init important facilities here. See `Core`'s documentation
+    // NOTE: Facilities to initialize here are first `addFacility<T>()`ed, then their
+    //       alias pointer is retrieved via `facility<T>()`. This way an user can
+    //       customize initialization of these facilities; just `addFacility<T>()`ed
+    //       them before calling `Core::init()`, and the `addFacility<T>()` calls
+    //       in `Core::init()` will do nothing.
+    //       This also means that the diagnostics data logged here must be gotten
+    //       from the alias pointer itself, not by assuming that the core has in
+    //       fact initialized the facilities!
+
     // Log
     {
-        size_t nMessagesInPool = ARES_CORE_LOG_MESSAGE_POOL_CAPACITY;
+        addFacility<Log>(ARES_CORE_LOG_MESSAGE_POOL_CAPACITY);
+        log_ = facility<Log>();
 
-        log_.reset(new Log(nMessagesInPool));
         log_->addSink(stderrLogSink, this);
+        ARES_log(*log_, Trace,
+                 "Log: %u messages in pool", log_->messagePoolSize());
 
-        ARES_log(*log_, Trace, "Log: %u messages in pool", nMessagesInPool);
+        // FIXME
     }
 
     ARES_log(*log_, Info, "Init");
 
     // Task scheduler
     {
-        unsigned int nWorkers = TaskScheduler::optimalNWorkers();
-        unsigned int nFibers = ARES_CORE_SCHEDULER_FIBER_POOL_CAPACITY;
-        size_t fiberStackSize = ARES_CORE_SCHEDULER_FIBER_STACK_SIZE;
+        addFacility<TaskScheduler>(TaskScheduler::optimalNWorkers(),
+                                   ARES_CORE_SCHEDULER_FIBER_POOL_CAPACITY,
+                                   ARES_CORE_SCHEDULER_FIBER_STACK_SIZE);
+        scheduler_ = facility<TaskScheduler>();
+
         ARES_log(*log_, Debug,
                  "Task scheduler: %u worker threads, %u fibers, %.1f KB fiber stacks",
-                 nWorkers, nFibers, float(fiberStackSize) / 1024.0f);
+                 scheduler_->nWorkers(), scheduler_->nFibers(),
+                 float(scheduler_->fiberStackSize()) / 1024.0f);
 
-        scheduler_.reset(new TaskScheduler(nWorkers, nFibers, fiberStackSize));
+        // FIXME If a `TaskScheduler` is added as a facility before the core is
+        //       constructed `nWorkers`, `nFibers` or `fiberStackSize` could differ!
+        //       Log values queried from `scheduler_` instead
     }
 
     // Scene
     {
-        size_t maxEntities = ARES_CORE_SCENE_ENTITY_CAPACITY;
+        addFacility<Scene>(ARES_CORE_SCENE_ENTITY_CAPACITY);
+        scene_ = facility<Scene>();
+
         ARES_log(*log_, Debug,
-                 "Scene: %lu entities maximum", maxEntities);
-        scene_.reset(new Scene(ARES_CORE_SCENE_ENTITY_CAPACITY));
+                 "Scene: %lu max entities",
+                 scene_->nEntities());
     }
 
-    // Resource loader
+    // ResourceLoader (and its FileStore)
     {
-        // TODO IMPORTANT Use an archive format/a PhysFS-like `FileStore` instead of raw files!
-        Path rootAssetPath = ".";
+        // FIXME Switchable `fileStore` implementation depending on use
+        addFacility<FolderFileStore>(".");
+        auto folderFileStore = facility<FolderFileStore>();
+        auto fileStore = static_cast<FileStore*>(folderFileStore);
+
         ARES_log(*log_, Debug,
-                 "FileStore: FolderFileStore(root=\"%s\")", rootAssetPath);
-        fileStore_.reset(new FolderFileStore(rootAssetPath));
-        resourceLoader_.reset(new ResourceLoader(fileStore_.get()));
+                 "ResourceLoader: Using FolderFileStore with root %s",
+                 folderFileStore->root());
+
+        addFacility<ResourceLoader>(fileStore);
+        resourceLoader_ = facility<ResourceLoader>();
     }
 
     // [Re]initialize all modules that were attached to the core before it was

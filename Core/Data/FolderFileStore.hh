@@ -37,6 +37,13 @@ public:
     {
         delete stream;
     }
+
+
+    /// Returns the path to the root of the folder file store.
+    inline const Path& root() const
+    {
+        return root_;
+    }
 };
 
 }

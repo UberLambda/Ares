@@ -4,19 +4,41 @@
 #include <atomic>
 #include <memory>
 #include <vector>
+#include <unordered_map>
+#include <typeindex>
 #include <utility>
 
 namespace Ares
 {
 
-class TaskScheduler; // (#include "Task/TaskScheduler.hh"
-class Scene; // (#include "Scene/Scene.hh" )
+class Module; // (#include "Module/Module.hh" )
 class Log; // (#include "Debug/Log.hh" )
+class TaskScheduler; // (#include "Task/TaskScheduler.hh" )
+class Scene; // (#include "Scene/Scene.hh" )
 class FileStore; // (#include "Data/FileStore.hh" )
 class ResourceLoader; // (#include "Data/ResourceLoader.hh" )
-class Module; // (#include "Module/Module.hh" )
 
 /// An instance of Ares' engine core.
+///
+/// The core contains a series of facilities (some of which and a list of modules.
+/// Modules get updated each frame and can use or register new core facilities
+/// to perform their functions.
+/// Each facility is a self-contained object that performs some task
+/// (ex.: a `Log` to log messages, a `Scene` to store components...).
+///
+/// Since `Core::facility<T>()` takes some lookup time to find the facility,
+/// modules are encouraged to cache the value of that call on init.
+/// Some important facilities are initialized by the core itself on `Core::init()`,
+/// unless the user did not already set them up beforehand; it that case, the user-provided
+/// facility will be used. Each of these important facilities has an an "alias pointer" in core,
+/// i.e. a pointer caching `facility<T>()` for them at core `init()` time.
+/// Important facilities are:
+/// - `Log`: Aliased in `Core::log()`
+/// - `TaskScheduler`: Aliased in `Core::scheduler()`
+/// - `ResourceLoader`: Aliased to `Core::resourceLoader()`
+///                     A `FolderFileStore` is also added, but not aliased anywhere;
+///                     access it with `facility<FolderFileStore>()`
+/// **WARNING**: Alias pointers are null before calling `Core::init()`!
 class Core
 {
     /// The current state of a `Core`.
@@ -28,16 +50,56 @@ class Core
     };
 
 private:
+    /// The base interface of all facility slots attached to a `Core`.
+    struct FacilitySlotBase
+    {
+        virtual ~FacilitySlotBase() = default;
+    };
+
+    /// A slot for a `T` facility attached to a `Core`.
+    template <typename T>
+    struct FacilitySlot : public FacilitySlotBase
+    {
+        Core* parent;
+        T facility;
+
+        /// Initializes a facility slot by moving the given facility into it.
+        FacilitySlot(Core* parent, T&& facility)
+            : parent(parent), facility(std::move(facility))
+        {
+            static_assert(std::is_move_constructible<T>::value,
+                          "Tried to move a non-move-constructible facility");
+        }
+
+        /// Initializes a facility slot by default-constructing a facility into it.
+        FacilitySlot(Core* parent)
+            : parent(parent), facility()
+        {
+            static_assert(std::is_default_constructible<T>::value,
+                          "Tried to default-construct a non-default-constructible facility");
+        }
+
+        /// Initializes a facility slot by constructing a facility into it using the given args.
+        template <typename... TArgs>
+        FacilitySlot(Core* parent, TArgs... facilityArgs)
+            : parent(parent), facility(std::forward<TArgs>(facilityArgs)...)
+        {
+        }
+
+        ~FacilitySlot() override = default; // (lets `~unique_ptr<T>` take care of everything)
+    };
+
     std::atomic<State> state_;
 
-    std::unique_ptr<Log> log_;
-    std::unique_ptr<TaskScheduler> scheduler_;
-    std::unique_ptr<Scene> scene_;
-    std::unique_ptr<FileStore> fileStore_;
-    std::unique_ptr<ResourceLoader> resourceLoader_;
-
     std::vector<Module*> modules_;
+    std::unordered_map<std::type_index, std::unique_ptr<FacilitySlotBase>> facilities_; ///< typeid(T) -> T facility slot map
 
+    // "Alias pointers" to important facilities, see documentation of `Core`
+    Log* log_;
+    TaskScheduler* scheduler_;
+    Scene* scene_;
+    ResourceLoader* resourceLoader_;
+    // End of alias pointers
 
     Core(const Core& toCopy) = delete;
     Core& operator=(const Core& toCopy) = delete;
@@ -89,6 +151,99 @@ public:
     }
 
 
+    /// Attempts to get the facility of the core of type `T`. Returns a pointer
+    /// to the facility if it is present or null otherwise.
+    ///
+    /// Using for storing `Log`, `Scene`, `ResourceLoader`, etc. in the core without
+    /// explictly declaring one slot for each thing and allowing modules to
+    /// register/retrieve facilities in a Core in a transparent way.
+    ///
+    /// For performance, call this function once at module initialization so that
+    /// the Core knows wether to instantiate/retrieve the `T` facility and then
+    /// cache the pointer (which is guaranteed to last until `Core` death) for
+    /// later use. **WARNING**: The `T*` will become invalid when the core is
+    /// destroyed!
+    template <typename T>
+    T* facility()
+    {
+        // Note that the address of `slot->facility` will never change since
+        // `slot`'s address itself is constant once it is constructed.
+
+        std::type_index facilityType = typeid(T);
+        auto it = facilities_.find(facilityType);
+        if(it != facilities_.end())
+        {
+            // Facility present
+            FacilitySlot<T>* slot = reinterpret_cast<FacilitySlot<T>*>(it->second.get());
+            return &slot->facility;
+        }
+        else
+        {
+            // No instance of such facility
+            return nullptr;
+        }
+    }
+
+    /// Attempts to move the given facility of type `T` into the core, or to
+    /// construct a `T` facility for the core given some arguments.
+    /// Does nothing and returns `false` if a `T` facility already exists for the core.
+    /// The facility will be destroyed when the `Core` itself is destroyed.
+    template <typename T,
+              typename = std::enable_if<std::is_move_constructible<T>::value>>
+    bool addFacility(T&& facilityToMove)
+    {
+        return addFacility<T, T&&>(std::move(facilityToMove));
+    }
+
+    template <typename T, typename... TArgs>
+    bool addFacility(TArgs&&... tArgs)
+    {
+        std::type_index facilityType = typeid(T);
+
+        auto it = facilities_.find(facilityType);
+        if(it == facilities_.end())
+        {
+            auto slot = new FacilitySlot<T>(this, std::forward<TArgs>(tArgs)...);
+            auto slotBase = static_cast<FacilitySlotBase*>(slot);
+            facilities_[facilityType] = std::unique_ptr<FacilitySlotBase>(slot);
+            return true;
+        }
+        else
+        {
+            // Facility already added
+            return false;
+        }
+    }
+
+    /// An alias pointer to `facility<Log>()`.
+    /// See `Core`'s documentation.
+    inline Log* log()
+    {
+        return log_;
+    }
+
+    /// An alias pointer to `facility<TaskScheduler>()`.
+    /// See `Core`'s documentation.
+    inline TaskScheduler* scheduler()
+    {
+        return scheduler_;
+    }
+
+    /// An alias pointer to `facility<Scene>()`.
+    /// See `Core`'s documentation.
+    inline Scene* scene()
+    {
+        return scene_;
+    }
+
+    /// An alias pointer to `facility<ResourceLoader>()`.
+    /// See `Core`'s documentation.
+    inline ResourceLoader* resourceLoader()
+    {
+        return resourceLoader_;
+    }
+
+
     /// Attempts to attachs the module to the core. If the core is already inited
     /// and/or running, also attempts to `init()` it after attaching it - logging
     /// an error message on init error.
@@ -102,32 +257,6 @@ public:
     /// Returns `false` and does nothing on error (no such module attached/module
     /// is null).
     bool detachModule(Module* module);
-
-
-
-    /// The core's log instance.
-    inline Log& log()
-    {
-        return *log_;
-    }
-
-    /// The core's task scheduler.
-    inline TaskScheduler& scheduler()
-    {
-        return *scheduler_;
-    }
-
-    /// The core's scene.
-    inline Scene& scene()
-    {
-        return *scene_;
-    }
-
-    /// The core's resource loader.
-    inline ResourceLoader& resourceLoader()
-    {
-        return *resourceLoader_;
-    }
 };
 
 /// An utility class that will `detachModule()` and `delete` a module when the
