@@ -24,6 +24,10 @@ public:
         : str_(message)
     {
     }
+    ErrString(std::string&& messageToMove)
+        : str_(std::move(messageToMove))
+    {
+    }
     ErrString(const char* message)
         : str_(message)
     {
