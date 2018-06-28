@@ -69,6 +69,9 @@ private:
     Map map_;
 
 public:
+    Config() = default;
+    ~Config() = default;
+
     /// Gets a copy of the value associated to the given key in the config, or a
     /// copy of `fallback` if the key was not found.
     inline ConfigValue get(const ConfigKey& key, ConfigValue fallback=ConfigValue()) const
