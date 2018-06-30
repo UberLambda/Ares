@@ -33,12 +33,12 @@ bool GfxModule::initWindow(Core& core)
     targetVideoMode.resolution = {800, 600};
     targetVideoMode.refreshRate = 0; // (don't care)
 
-    ARES_log(core.log(), Trace, "Creating window");
+    ARES_log(*core.log(), Trace, "Creating window");
 
     Window window(Window::GL33, targetVideoMode, "Ares");
     if(!window)
     {
-        ARES_log(core.log(), Fatal, "Failed to create window");
+        ARES_log(*core.log(), Fatal, "Failed to create window");
         return false;
     }
 
@@ -56,19 +56,19 @@ bool GfxModule::initGL(Core& core)
 
     if(majorVersion <= 0 || minorVersion <= 0)
     {
-        ARES_log(core.log(), Error,
+        ARES_log(*core.log(), Error,
                  "Could not query OpenGL version, context is too old or broken!");
         return false;
     }
 
     { // Some debug logging
-        ARES_log(core.log(), Debug,
+        ARES_log(*core.log(), Debug,
                  "Got OpenGL %d.%d [%s, %s]",
                  majorVersion, minorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR));
 
         static constexpr const char* checkStrs[] = { "no", "yes" };
 #define ARES_gfxLogHasGL(func) \
-        ARES_log(core.log(), Trace, "Have %s? %s", #func, checkStrs[func != nullptr]);
+        ARES_log(*core.log(), Trace, "Have %s? %s", #func, checkStrs[func != nullptr]);
 
         ARES_gfxLogHasGL(glMultiDrawElementsIndirect);
 

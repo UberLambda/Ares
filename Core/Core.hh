@@ -2,11 +2,9 @@
 
 #include <stddef.h>
 #include <atomic>
-#include <memory>
 #include <vector>
-#include <unordered_map>
-#include <typeindex>
 #include <utility>
+#include "Base/TypeMap.hh"
 
 namespace Ares
 {
@@ -50,49 +48,10 @@ class Core
     };
 
 private:
-    /// The base interface of all facility slots attached to a `Core`.
-    struct FacilitySlotBase
-    {
-        virtual ~FacilitySlotBase() = default;
-    };
-
-    /// A slot for a `T` facility attached to a `Core`.
-    template <typename T>
-    struct FacilitySlot : public FacilitySlotBase
-    {
-        Core* parent;
-        T facility;
-
-        /// Initializes a facility slot by moving the given facility into it.
-        FacilitySlot(Core* parent, T&& facility)
-            : parent(parent), facility(std::move(facility))
-        {
-            static_assert(std::is_move_constructible<T>::value,
-                          "Tried to move a non-move-constructible facility");
-        }
-
-        /// Initializes a facility slot by default-constructing a facility into it.
-        FacilitySlot(Core* parent)
-            : parent(parent), facility()
-        {
-            static_assert(std::is_default_constructible<T>::value,
-                          "Tried to default-construct a non-default-constructible facility");
-        }
-
-        /// Initializes a facility slot by constructing a facility into it using the given args.
-        template <typename... TArgs>
-        FacilitySlot(Core* parent, TArgs... facilityArgs)
-            : parent(parent), facility(std::forward<TArgs>(facilityArgs)...)
-        {
-        }
-
-        ~FacilitySlot() override = default; // (lets `~unique_ptr<T>` take care of everything)
-    };
-
     std::atomic<State> state_;
 
     std::vector<Module*> modules_;
-    std::unordered_map<std::type_index, std::unique_ptr<FacilitySlotBase>> facilities_; ///< typeid(T) -> T facility slot map
+    TypeMap facilities_; ///< typeid(T) -> T facility slot map
 
     // "Alias pointers" to important facilities, see documentation of `Core`
     Log* log_;
@@ -164,55 +123,19 @@ public:
     /// later use. **WARNING**: The `T*` will become invalid when the core is
     /// destroyed!
     template <typename T>
-    T* facility()
+    inline T* facility()
     {
-        // Note that the address of `slot->facility` will never change since
-        // `slot`'s address itself is constant once it is constructed.
-
-        std::type_index facilityType = typeid(T);
-        auto it = facilities_.find(facilityType);
-        if(it != facilities_.end())
-        {
-            // Facility present
-            FacilitySlot<T>* slot = reinterpret_cast<FacilitySlot<T>*>(it->second.get());
-            return &slot->facility;
-        }
-        else
-        {
-            // No instance of such facility
-            return nullptr;
-        }
+        return facilities_.get<T>();
     }
 
     /// Attempts to move the given facility of type `T` into the core, or to
     /// construct a `T` facility for the core given some arguments.
     /// Does nothing and returns `false` if a `T` facility already exists for the core.
     /// The facility will be destroyed when the `Core` itself is destroyed.
-    template <typename T,
-              typename = std::enable_if<std::is_move_constructible<T>::value>>
-    bool addFacility(T&& facilityToMove)
-    {
-        return addFacility<T, T&&>(std::move(facilityToMove));
-    }
-
     template <typename T, typename... TArgs>
     bool addFacility(TArgs&&... tArgs)
     {
-        std::type_index facilityType = typeid(T);
-
-        auto it = facilities_.find(facilityType);
-        if(it == facilities_.end())
-        {
-            auto slot = new FacilitySlot<T>(this, std::forward<TArgs>(tArgs)...);
-            auto slotBase = static_cast<FacilitySlotBase*>(slot);
-            facilities_[facilityType] = std::unique_ptr<FacilitySlotBase>(slot);
-            return true;
-        }
-        else
-        {
-            // Facility already added
-            return false;
-        }
+        return facilities_.add<T>(std::forward<TArgs>(tArgs)...);
     }
 
     /// An alias pointer to `facility<Log>()`.
