@@ -15,6 +15,9 @@ class TypeMap
     struct SlotBase
     {
         virtual ~SlotBase() = default; // (will invoke `~Slot<T>()`)
+
+        /// Returns a typeless pointer to the slotted value
+        virtual void* get() = 0;
     };
 
     template <typename T>
@@ -35,6 +38,12 @@ class TypeMap
         }
 
         ~Slot() override = default; // (will invoke `value.~T()`)
+
+
+        void* get() override
+        {
+            return reinterpret_cast<void*>(&value);
+        }
     };
 
     using SlotMap = std::unordered_map<std::type_index, std::unique_ptr<SlotBase>>;
@@ -62,6 +71,9 @@ class TypeMap
     }
 
 public:
+    friend class const_iterator;
+    class const_iterator;
+
     TypeMap() = default;
     ~TypeMap() = default;
 
@@ -112,6 +124,107 @@ public:
     {
         std::type_index tType = typeid(T);
         map_.erase(tType);
+    }
+
+
+    /// A readonly iterator over pairs in the `EventQueue<T>`.
+    /// Pointers to `T`s are retrieved as `void*`.
+    class const_iterator
+    {
+    public:
+        using iterator_category = std::input_iterator_tag;
+        using value_type = std::pair<std::type_index, void*>;
+        using reference = const value_type&;
+        using pointer = const value_type*;
+
+    private:
+        friend class TypeMap;
+
+        using InnerIterator = TypeMap::SlotMap::const_iterator;
+        InnerIterator it_;
+        value_type itPair_;
+
+        const_iterator(const InnerIterator it)
+            : it_(it), itPair_(typeid(int), nullptr)
+        {
+            // (`itPair_` undefined here)
+        }
+
+    public:
+        const_iterator(const const_iterator& toCopy)
+            : const_iterator(toCopy.it_)
+        {
+            // (`itPair_` does not need to be copied)
+        }
+
+        inline const_iterator& operator=(const const_iterator& toCopy)
+        {
+            it_ = toCopy.it_;
+            // (`itPair_` does not need to be copied)
+
+            return *this;
+        }
+
+
+        inline pointer operator->()
+        {
+            // Update `itPair_` and return a pointer to it
+            itPair_.first = it_->first;
+            auto slotPtr = reinterpret_cast<SlotBase*>(it_->second.get());
+            itPair_.second = slotPtr->get();
+
+            return &itPair_;
+        }
+
+        inline reference operator*()
+        {
+            return *operator->();
+        }
+
+
+        inline bool operator==(const const_iterator& other) const
+        {
+            return it_ == other.it_;
+        }
+
+        inline bool operator!=(const const_iterator& other) const
+        {
+            return !operator==(other);
+        }
+
+
+        const_iterator& operator++() // preincrement
+        {
+            it_ ++;
+            return *this;
+        }
+
+        inline const_iterator operator++(int) // postincrement
+        {
+            const_iterator old = *this;
+            (void)operator++();
+            return old;
+        }
+    };
+
+    inline const_iterator begin() const
+    {
+        return const_iterator(map_.cbegin());
+    }
+
+    inline const_iterator cbegin() const
+    {
+        return begin();
+    }
+
+    inline const_iterator end() const
+    {
+        return const_iterator(map_.cend());
+    }
+
+    inline const_iterator cend() const
+    {
+        return end();
     }
 };
 
