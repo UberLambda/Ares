@@ -1,43 +1,31 @@
 #include "ResourceLoader.hh"
 
 #include <assert.h>
-#include "ResourceRef.hh"
 
 namespace Ares
 {
 
 ResourceLoader::ResourceLoader(FileStore* fileStore)
-    : fileStore_(fileStore), nextResId_(0)
+    : fileStore_(fileStore)
 {
 }
 
 ResourceLoader::~ResourceLoader()
 {
-    size_t nStoredRes = resMap_.size();
-    size_t nCleanedRes = cleanup();
-    assert(nCleanedRes == nStoredRes && "cleanup() did not free all resources on exit!");
+    cleanup();
 }
 
 size_t ResourceLoader::cleanup()
 {
-    std::lock_guard<std::mutex> resMapScopedLock(resMapLock_);
-    std::lock_guard<std::mutex> pathMapScopedLock(pathMapLock_);
+    std::lock_guard<std::mutex> allStoresLock(resourceStoresLock_);
 
     size_t nCleaned = 0;
-    for(auto it = resMap_.begin(); it != resMap_.end();)
+    for(auto it = resourceStores_.begin(); it != resourceStores_.end(); it ++)
     {
-        if(it->second.refCount == 0) // (atomic)
-        {
-            delete it->second.resource; // Note: `~TResHandler()` will automatically
-                                        //       destroy its inner `T` here
-            it = resMap_.erase(it);
-            nCleaned ++;
-        }
-        else
-        {
-            it ++;
-        }
+        auto store = reinterpret_cast<ResourceStoreBase*>(it->second);
+        nCleaned += store->cleanup();
     }
+
     return nCleaned;
 }
 

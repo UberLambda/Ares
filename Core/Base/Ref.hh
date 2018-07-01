@@ -30,7 +30,7 @@ class Ref
         Data* data = data_.load();
         if(data)
         {
-            return &data_.t;
+            return &data->t;
         }
         else
         {
@@ -77,6 +77,7 @@ public:
 
         if(data_) // (atomic load `data_`)
         {
+            // FIXME `data_` could potentially have been set to `null` by another thread here!
             data_.load()->refCount ++; // (atomic load `data_` + atomic fetch/add `data_->refCount`)
         }
 
@@ -133,6 +134,31 @@ public:
             // `data->refCount` is not zero because `Ref(const Ref&)` incremented
             // it; in both cases we need to abort the deletion of `data_` (hence also `data_->t`)
             // since they are still required by the newly-instantiated ref!
+        }
+    }
+
+
+    /// Returns `true` if the `Ref` is currently pointing to a `T`, or `false`
+    /// if it is a null `Ref`.
+    /// Threadsafe and lockless.
+    inline operator bool() const
+    {
+        return data_.load() != nullptr;
+    }
+
+    /// Returns the current reference count of the internal `T`, or 0 if this is
+    /// a null ref.
+    /// Threadsafe and lockless.
+    inline unsigned int refCount() const
+    {
+        if(data_.load() != nullptr)
+        {
+            // FIXME `data_` could potentially have been set to `null` by another thread here!
+            return data_.load()->refCount.load();
+        }
+        else
+        {
+            return 0;
         }
     }
 
