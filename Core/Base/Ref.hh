@@ -55,7 +55,8 @@ class Ref
         }
     };
 
-    /// A `T` allocated on the stack.
+    /// A `T` allocated on the stack (or, actually, on the heap as part of `Data`
+    /// if inside of `data_`)
     struct TStackBox
     {
         T t;
@@ -143,6 +144,8 @@ public:
     /// See `Ref(const Ref&)`.
     Ref& operator=(const Ref& toCopy)
     {
+        this->~Ref();
+
         // Copy over toCopy's data, if any; if data is present, increment its
         // reference count.
         data_ = toCopy.data_.load(); // (atomic load `toCopy.data_`, followed by atomic store `data_`)
@@ -164,6 +167,7 @@ public:
     /// is running) this operation may fail and leave this ref null.
     /// Threadsafe and lockless.
     Ref(Ref&& toMove)
+        : data_(nullptr)
     {
         (void)operator=(std::move(toMove));
     }
@@ -171,6 +175,8 @@ public:
     /// See `Ref(Ref&&)`
     Ref& operator=(Ref&& toMove)
     {
+        this->~Ref();
+
         data_ = toMove.data_.exchange(nullptr); // (atomic exchange `toMove.data_` + atomic store `data_`)
 
         return *this;
