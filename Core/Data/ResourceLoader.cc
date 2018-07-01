@@ -5,7 +5,7 @@
 namespace Ares
 {
 
-ResourceLoader::ResourceLoader(FileStore* fileStore)
+ResourceLoader::ResourceLoader(Ref<FileStore> fileStore)
     : fileStore_(fileStore)
 {
 }

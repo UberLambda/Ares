@@ -13,8 +13,7 @@ namespace Ares
 {
 
 Core::Core()
-    : state_(Dead),
-      log_(nullptr), scheduler_(nullptr), scene_(nullptr), resourceLoader_(nullptr)
+    : state_(Dead)
 {
 }
 
@@ -31,24 +30,18 @@ Core::~Core()
 
     state_ = Dead;
 
-    log_->flush();
+    g().log->flush();
 
     // Detach and halt all modules that are still attached to the core
-    for(Module* module : modules_)
+    for(const Ref<Module>& module : modules_)
     {
         detachModule(module);
     }
 
-    if(log_)
-    {
-        // Perform one final log flush
-        log_->flush();
-    }
+    // Perform one final log flush
+    g().log->flush();
 
-    // `~FacilitySlot<T>()` invocations will free all resources, but need to mark
-    // the alias pointers as now invalid
-    log_ = nullptr;
-    scheduler_ = nullptr;
+    // `~GlobalData()` and `~FrameData()` invocations will free all resources
 }
 
 
@@ -72,41 +65,31 @@ bool Core::init()
         return true;
     }
 
-    // Init important facilities here. See `Core`'s documentation
-    // NOTE: Facilities to initialize here are first `addFacility<T>()`ed, then their
-    //       alias pointer is retrieved via `facility<T>()`. This way an user can
-    //       customize initialization of these facilities; just `addFacility<T>()`ed
-    //       them before calling `Core::init()`, and the `addFacility<T>()` calls
-    //       in `Core::init()` will do nothing.
-    //       This also means that the diagnostics data logged here must be gotten
-    //       from the alias pointer itself, not by assuming that the core has in
-    //       fact initialized the facilities!
-
     // Log
     {
-        addFacility<Log>(ARES_CORE_LOG_MESSAGE_POOL_CAPACITY);
-        log_ = facility<Log>();
+        g().log.reset(new Log(ARES_CORE_LOG_MESSAGE_POOL_CAPACITY));
 
-        log_->addSink(stderrLogSink, this);
-        ARES_log(*log_, Trace,
-                 "Log: %u messages in pool", log_->messagePoolSize());
+#define glog (*g().log)
+
+        glog.addSink(stderrLogSink, this);
+        ARES_log(glog, Trace,
+                 "Log: %u messages in pool", glog.messagePoolSize());
 
         // FIXME
     }
 
-    ARES_log(*log_, Info, "Init");
+    ARES_log(glog, Info, "Init");
 
     // Task scheduler
     {
-        addFacility<TaskScheduler>(TaskScheduler::optimalNWorkers(),
-                                   ARES_CORE_SCHEDULER_FIBER_POOL_CAPACITY,
-                                   ARES_CORE_SCHEDULER_FIBER_STACK_SIZE);
-        scheduler_ = facility<TaskScheduler>();
+        g().scheduler.reset(new TaskScheduler(TaskScheduler::optimalNWorkers(),
+                                                   ARES_CORE_SCHEDULER_FIBER_POOL_CAPACITY,
+                                                   ARES_CORE_SCHEDULER_FIBER_STACK_SIZE));
 
-        ARES_log(*log_, Debug,
+        ARES_log(glog, Debug,
                  "Task scheduler: %u worker threads, %u fibers, %.1f KB fiber stacks",
-                 scheduler_->nWorkers(), scheduler_->nFibers(),
-                 float(scheduler_->fiberStackSize()) / 1024.0f);
+                 g().scheduler->nWorkers(), g().scheduler->nFibers(),
+                 float(g().scheduler->fiberStackSize()) / 1024.0f);
 
         // FIXME If a `TaskScheduler` is added as a facility before the core is
         //       constructed `nWorkers`, `nFibers` or `fiberStackSize` could differ!
@@ -115,34 +98,31 @@ bool Core::init()
 
     // Scene
     {
-        addFacility<Scene>(ARES_CORE_SCENE_ENTITY_CAPACITY);
-        scene_ = facility<Scene>();
+        g().scene.reset(new Scene(ARES_CORE_SCENE_ENTITY_CAPACITY));
 
-        ARES_log(*log_, Debug,
+        ARES_log(glog, Debug,
                  "Scene: %lu max entities",
-                 scene_->nEntities());
+                 g().scene->nEntities());
     }
 
     // ResourceLoader (and its FileStore)
     {
         // FIXME Switchable `fileStore` implementation depending on use
-        addFacility<FolderFileStore>(".");
-        auto folderFileStore = facility<FolderFileStore>();
-        auto fileStore = static_cast<FileStore*>(folderFileStore);
+        auto folderFileStore = new FolderFileStore(".");
+        Ref<FileStore> fileStore = intoRef<FileStore>(folderFileStore);
 
-        ARES_log(*log_, Debug,
+        ARES_log(glog, Debug,
                  "ResourceLoader: Using FolderFileStore with root %s",
                  folderFileStore->root());
 
-        addFacility<ResourceLoader>(fileStore);
-        resourceLoader_ = facility<ResourceLoader>();
+        g().resLoader.reset(new ResourceLoader(std::move(fileStore)));
     }
 
     // [Re]initialize all modules that were attached to the core before it was
     // `init()`ed
-    for(Module* module : modules_)
+    for(Ref<Module>& module : modules_)
     {
-        if(!initModule(module))
+        if(!initModule(module.get()))
         {
             // The initialization of a module failed
             return false;
@@ -162,7 +142,7 @@ bool Core::run()
     }
 
     state_ = Running;
-    ARES_log(*log_, Info, "Running");
+    ARES_log(glog, Info, "Running");
 
     // Main loop
     TaskVar frameVar{0};
@@ -170,15 +150,15 @@ bool Core::run()
     {
         // Schedule the update tasks for each module that can run on worker
         // threads; use `frameVar` as counter
-        for(Module* module : modules_)
+        for(Ref<Module>& module : modules_)
         {
-            scheduler_->schedule(module->updateTask(*this), &frameVar);
+            g().scheduler->schedule(module->updateTask(*this), &frameVar);
         }
 
         // Update everything that has to be updated on the main thread for each
         // module; in the meantime, the worker tasks scheduled earlier are being
         // executed in the background...
-        for(Module* module : modules_)
+        for(Ref<Module>& module : modules_)
         {
             module->mainUpdate(*this);
         }
@@ -190,17 +170,24 @@ bool Core::run()
         // This amount of messages to be flushed should be enough to make sure
         // that the message buffer is always empty afterwards (so that we don't
         // run out of log messages in the log's message pool...)
-        log_->flush(ARES_CORE_LOG_MESSAGE_POOL_CAPACITY);
+        glog.flush(ARES_CORE_LOG_MESSAGE_POOL_CAPACITY);
 
         // Wait for all module update tasks to finish...
         while(frameVar.load() != 0)
         {
             // TODO: Do something more useful, don't just spinlock
         }
+
+        // Clear the previous frame's data and swap current and previous frame
+        // data. Events/commands that were in `current()` will now be in `past()`
+        // for the next frame, ready to be processed; `current()` will be blank,
+        // ready to be filled with new data.
+        frameData_.past().clear();
+        frameData_.swap();
     }
 
-    ARES_log(*log_, Info, "Done running");
-    log_->flush();
+    ARES_log(glog, Info, "Done running");
+    glog.flush();
     return true;
 }
 
@@ -215,19 +202,19 @@ bool Core::initModule(Module* module)
 {
     if(module->init(*this))
     {
-        ARES_log(*log_, Trace,
+        ARES_log(glog, Trace,
                  "Attaching module @%p", module);
         return true;
     }
     else
     {
-        ARES_log(*log_, Error,
+        ARES_log(glog, Error,
                  "Failed to attach module @%p, initalization error!", module);
         return false;
     }
 }
 
-bool Core::attachModule(Module* module)
+bool Core::attachModule(Ref<Module> module)
 {
     if(!module || std::find(modules_.begin(), modules_.end(), module) != modules_.end())
     {
@@ -237,14 +224,14 @@ bool Core::attachModule(Module* module)
     if(state_ != Dead)
     {
         // Core already inited/running, initialize module here
-        (void)initModule(module); // (may fail, logs errors)
+        (void)initModule(module.get()); // (may fail, logs errors)
     }
 
-    modules_.push_back(module);
+    modules_.push_back(module); // (increases refcount)
     return true;
 }
 
-bool Core::detachModule(Module* module)
+bool Core::detachModule(Ref<Module> module)
 {
     auto it = std::find(modules_.begin(), modules_.end(), module);
     if(it == modules_.end())
@@ -252,22 +239,12 @@ bool Core::detachModule(Module* module)
         return false;
     }
 
-    ARES_log(*log_, Trace,
-             "Halting and detaching module @%p", *it);
+    ARES_log(glog, Trace,
+             "Halting and detaching module @%p", it->get());
 
     (*it)->halt(*this);
     modules_.erase(it);
     return true;
-}
-
-
-AutoDetach::~AutoDetach()
-{
-    if(module_)
-    {
-        core_->detachModule(module_);
-        delete module_; module_ = nullptr;
-    }
 }
 
 

@@ -36,7 +36,7 @@ public:
     /// Clears every event queue in the event matrix.
     void clearAllQueues()
     {
-        for(std::pair<typeid(T), void*>& queuePair : matrix_)
+        for(const std::pair<std::type_index, void*>& queuePair : matrix_)
         {
             auto queue = reinterpret_cast<EventQueueBase*>(queuePair.second);
             queue->clear();

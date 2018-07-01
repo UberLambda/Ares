@@ -12,7 +12,7 @@ template <typename T>
 class DoubleBuffered
 {
     T items_[2];
-    std::atomic<int> which_;
+    int which_;
 
     DoubleBuffered(const DoubleBuffered& toCopy) = delete;
     DoubleBuffered& operator=(const DoubleBuffered& toCopy) = delete;
@@ -34,8 +34,8 @@ public:
         // Move data over
         items_[0] = std::move(toMove.items_[0]);
         items_[1] = std::move(toMove.items_[1]);
-        which_ = toMove.which_.load(); // (atomic load + store)
-        
+        which_ = toMove.which_;
+
         // Moved instance is invalidated by having its `T`s moved!
 
         return *this;
@@ -44,26 +44,24 @@ public:
     ~DoubleBuffered() = default;
 
 
-    /// Returns a pointer to the item of the two that is "current".
-    /// Threadsafe and lockless.
-    inline T* current()
+    /// Returns a reference to the item of the two that is "current".
+    inline T& current()
     {
-        return items_[which_.load()];
+        return items_[which_];
     }
 
-    /// Returns a pointer to the item of the two that is "past".
-    /// Threadsafe and lockless.
-    inline T* past()
+    /// Returns a reference to the item of the two that is "past".
+    inline T& past()
     {
-        return items_[!which_.load()];
+        return items_[!which_];
     }
 
     /// Swaps `current()` and `swap()`.
-    /// Threadsafe and lockless.
+    /// **NOT** threadsafe!
     inline void swap()
     {
-        which_ ^= 1; // (atomic fetch/xor)
+        which_ ^= 1;
     }
-}
+};
 
 }

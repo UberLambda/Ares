@@ -4,39 +4,21 @@
 #include <atomic>
 #include <vector>
 #include <utility>
-#include "Base/TypeMap.hh"
+#include "Base/DoubleBuffered.hh"
+#include "Base/Ref.hh"
+#include "GlobalData.hh"
+#include "FrameData.hh"
 
 namespace Ares
 {
 
 class Module; // (#include "Module/Module.hh" )
-class Log; // (#include "Debug/Log.hh" )
-class TaskScheduler; // (#include "Task/TaskScheduler.hh" )
-class Scene; // (#include "Scene/Scene.hh" )
-class FileStore; // (#include "Data/FileStore.hh" )
-class ResourceLoader; // (#include "Data/ResourceLoader.hh" )
 
 /// An instance of Ares' engine core.
 ///
-/// The core contains a series of facilities (some of which and a list of modules.
+/// The core contains a list of modules.
 /// Modules get updated each frame and can use or register new core facilities
 /// to perform their functions.
-/// Each facility is a self-contained object that performs some task
-/// (ex.: a `Log` to log messages, a `Scene` to store components...).
-///
-/// Since `Core::facility<T>()` takes some lookup time to find the facility,
-/// modules are encouraged to cache the value of that call on init.
-/// Some important facilities are initialized by the core itself on `Core::init()`,
-/// unless the user did not already set them up beforehand; it that case, the user-provided
-/// facility will be used. Each of these important facilities has an an "alias pointer" in core,
-/// i.e. a pointer caching `facility<T>()` for them at core `init()` time.
-/// Important facilities are:
-/// - `Log`: Aliased in `Core::log()`
-/// - `TaskScheduler`: Aliased in `Core::scheduler()`
-/// - `ResourceLoader`: Aliased to `Core::resourceLoader()`
-///                     A `FolderFileStore` is also added, but not aliased anywhere;
-///                     access it with `facility<FolderFileStore>()`
-/// **WARNING**: Alias pointers are null before calling `Core::init()`!
 class Core
 {
     /// The current state of a `Core`.
@@ -50,15 +32,9 @@ class Core
 private:
     std::atomic<State> state_;
 
-    std::vector<Module*> modules_;
-    TypeMap facilities_; ///< typeid(T) -> T facility slot map
-
-    // "Alias pointers" to important facilities, see documentation of `Core`
-    Log* log_;
-    TaskScheduler* scheduler_;
-    Scene* scene_;
-    ResourceLoader* resourceLoader_;
-    // End of alias pointers
+    std::vector<Ref<Module>> modules_;
+    GlobalData globalData_;
+    DoubleBuffered<FrameData> frameData_;
 
     Core(const Core& toCopy) = delete;
     Core& operator=(const Core& toCopy) = delete;
@@ -110,60 +86,27 @@ public:
     }
 
 
-    /// Attempts to get the facility of the core of type `T`. Returns a pointer
-    /// to the facility if it is present or null otherwise.
-    ///
-    /// Using for storing `Log`, `Scene`, `ResourceLoader`, etc. in the core without
-    /// explictly declaring one slot for each thing and allowing modules to
-    /// register/retrieve facilities in a Core in a transparent way.
-    ///
-    /// For performance, call this function once at module initialization so that
-    /// the Core knows wether to instantiate/retrieve the `T` facility and then
-    /// cache the pointer (which is guaranteed to last until `Core` death) for
-    /// later use. **WARNING**: The `T*` will become invalid when the core is
-    /// destroyed!
-    template <typename T>
-    inline T* facility()
+    /// The core's global data.
+    /// This data is always valid for the duration of the core and contains
+    inline GlobalData& g()
     {
-        return facilities_.get<T>();
+        return globalData_;
     }
 
-    /// Attempts to move the given facility of type `T` into the core, or to
-    /// construct a `T` facility for the core given some arguments.
-    /// Does nothing and returns `false` if a `T` facility already exists for the core.
-    /// The facility will be destroyed when the `Core` itself is destroyed.
-    template <typename T, typename... TArgs>
-    bool addFacility(TArgs&&... tArgs)
+    /// The core's frame data for the current frame.
+    /// This data is to be modified for the current frame so that the next frame
+    /// can display/act upon it.
+    inline FrameData& curr()
     {
-        return facilities_.add<T>(std::forward<TArgs>(tArgs)...);
+        return frameData_.current();
     }
 
-    /// An alias pointer to `facility<Log>()`.
-    /// See `Core`'s documentation.
-    inline Log* log()
+    /// The core's frame data for the previous frame.
+    /// This data is to be rendered/processed/only read in the current frame,
+    /// after which it will be cleared.
+    inline const FrameData& past()
     {
-        return log_;
-    }
-
-    /// An alias pointer to `facility<TaskScheduler>()`.
-    /// See `Core`'s documentation.
-    inline TaskScheduler* scheduler()
-    {
-        return scheduler_;
-    }
-
-    /// An alias pointer to `facility<Scene>()`.
-    /// See `Core`'s documentation.
-    inline Scene* scene()
-    {
-        return scene_;
-    }
-
-    /// An alias pointer to `facility<ResourceLoader>()`.
-    /// See `Core`'s documentation.
-    inline ResourceLoader* resourceLoader()
-    {
-        return resourceLoader_;
+        return frameData_.past();
     }
 
 
@@ -172,57 +115,14 @@ public:
     /// an error message on init error.
     /// Returns `false` and does nothing if the module is already attached or
     /// `module` is null.
-    /// **WARNING**: The module must stay valid for the entire lifetime of the
-    ///              `Core`, or atleast until it is detached!
-    bool attachModule(Module* module);
+    bool attachModule(Ref<Module> module);
 
     /// Attempts to `halt()` then detach the given module.
     /// Returns `false` and does nothing on error (no such module attached/module
     /// is null).
-    bool detachModule(Module* module);
-};
-
-/// An utility class that will `detachModule()` and `delete` a module when the
-/// object goes out of scope.
-class AutoDetach
-{
-    Core* core_;
-    Module* module_;
-
-    AutoDetach(const AutoDetach& toCopy) = delete;
-    AutoDetach& operator=(const AutoDetach& toCopy) = delete;
-
-public:
-    AutoDetach(Core& core, Module* module)
-        : core_(&core), module_(module)
-    {
-    }
-
-    AutoDetach(AutoDetach&& toMove)
-    {
-        (void)operator=(std::move(toMove));
-    }
-    AutoDetach& operator=(AutoDetach&& toMove)
-    {
-        // Destroy any old module
-        this->~AutoDetach();
-
-        // Move data over
-        this->core_ = toMove.core_;
-        this->module_ = toMove.module_;
-
-        // Invalidate the moved instance
-        toMove.module_ = nullptr;
-
-        return *this;
-    }
-
-    ~AutoDetach();
-
-    inline operator Module*()
-    {
-        return module_;
-    }
+    /// Note that the module is just detached, not deleted; if `module`'s reference
+    /// count is still > 0 the module will be kept in memory!
+    bool detachModule(Ref<Module> module);
 };
 
 }

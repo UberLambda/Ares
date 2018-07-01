@@ -4,6 +4,7 @@
 #include <utility>
 #include <atomic>
 #include <mutex>
+#include <type_traits>
 
 namespace Ares
 {
@@ -13,10 +14,92 @@ namespace Ares
 template <typename T>
 class Ref
 {
+    template <typename U, typename... TArgs>
+    friend Ref<U> makeRef(TArgs&&... tArgs);
+
+    template <typename U>
+    friend Ref<U> intoRef(U* t);
+
+
+    /// A `T` allocated on the heap.
+    struct THeapBox
+    {
+        T* t;
+
+        /// Takes ownership of `t`.
+        THeapBox(T* t)
+            : t(t)
+        {
+        }
+
+        /// Constructs a new `t` in-place.
+        template <typename... TArgs>
+        THeapBox(TArgs&&... args)
+            : t(new T(std::forward<TArgs>(args)...))
+        {
+        }
+
+        ~THeapBox()
+        {
+            delete t; // t.~T() will be run here
+        }
+
+        inline T* get()
+        {
+            return t;
+        }
+
+        inline const T* get() const
+        {
+            return t;
+        }
+    };
+
+    /// A `T` allocated on the stack.
+    struct TStackBox
+    {
+        T t;
+
+        /// Takes ownership of `t`.
+        TStackBox(T* t)
+            : t(std::move(t))
+        {
+            delete t;
+        }
+
+        /// Constructs a new `t` in-place.
+        template <typename... TArgs>
+        TStackBox(TArgs&&... args)
+            : t(std::forward<TArgs>(args)...)
+        {
+        }
+
+        ~TStackBox()
+        {
+            // t.~T() will be run here
+        }
+
+        inline T* get()
+        {
+            return &t;
+        }
+
+        inline const T* get() const
+        {
+            return &t;
+        }
+    };
+
+
+    /// A box acting as a `T`; allocated on the stack if possible (i.e. if
+    /// a `T` can be allocated because it is not abstract), otherwise allocated
+    /// on the heap.
+    using TBox = typename std::conditional<std::is_abstract<T>::value, THeapBox, TStackBox>::type;
+
     // (see `~Ref()`)
     struct Data
     {
-        T t;
+        TBox t;
         std::atomic<unsigned int> refCount;
 
         ~Data() = default; // (will invoke `t.~T()`)
@@ -30,7 +113,7 @@ class Ref
         Data* data = data_.load();
         if(data)
         {
-            return &data->t;
+            return data->t.get();
         }
         else
         {
@@ -44,17 +127,6 @@ public:
     Ref()
         : data_(nullptr)
     {
-    }
-
-    /// Constructs a new `Ref` that will own a `T` constructed by passing `tArgs`
-    /// to `T`'s constructor.
-    /// Threadsafe and lockless.
-    template <typename... TArgs>
-    static Ref alloc(TArgs&&... tArgs)
-    {
-        Ref ref;
-        ref.data_ = new Data{{std::forward<TArgs>(tArgs)...}, {1}};
-        return std::move(ref);
     }
 
     /// Constructs a new `Ref` by copying the given one.
@@ -196,5 +268,38 @@ public:
         return *get_();
     }
 };
+
+
+/// Constructs a new `Ref` that will own a `T` constructed by passing `tArgs`
+/// to `T`'s constructor.
+/// Threadsafe and lockless.
+template <typename T, typename... TArgs>
+inline Ref<T> makeRef(TArgs&&... tArgs)
+{
+    using Ref = Ref<T>;
+    using RefData = typename Ref::Data;
+
+    Ref ref;
+    ref.data_ = new RefData{{std::forward<TArgs>(tArgs)...}, {1}};
+    return std::move(ref);
+}
+
+/// Transfers ownership of `t` to a new `Ref` with reference count 1.
+/// `t` must have been allocated with `operator new`.
+/// **WARNING**: This could potentially move the `T` at `t` to a new memory location,
+///              making the pointer invalid! Do not reuse the supplied `t` pointer;
+///              use `get()` on the returned ref instead.
+/// Threadsafe and lockless.
+template <typename T>
+inline Ref<T> intoRef(T* t)
+{
+    // Abstract type: replace the `T*` in the `ref.data_: THeapBox`
+    using Ref = Ref<T>;
+    using RefData = typename Ref::Data;
+
+    Ref ref;
+    ref.data_ = new RefData{{t}, {1}};
+    return std::move(ref);
+}
 
 }

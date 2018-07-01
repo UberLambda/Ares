@@ -64,12 +64,12 @@ class ResourceLoader
         }
     };
 
-    FileStore* fileStore_;
+    Ref<FileStore> fileStore_;
     TypeMap resourceStores_;
     std::mutex resourceStoresLock_;
 
 public:
-    ResourceLoader(FileStore* fileStore);
+    ResourceLoader(Ref<FileStore> fileStore);
     ~ResourceLoader();
 
     /// Attempts to parse and load a resource of type `T` in memory.
@@ -122,7 +122,7 @@ public:
         // Allocate a refcounted `T` and try to parse it from file
         // TODO Allocate resource in a contiguous memory region, not scattering
         //      them on the heap!
-        auto resource = Ref<T>::alloc();
+        auto resource = makeRef<T>();
         ErrString parsingErr = ResourceParser<T>::parse(*resource, *stream, fileExt);
 
         fileStore_->freeStream(stream); // (assumed to be threadsafe)
