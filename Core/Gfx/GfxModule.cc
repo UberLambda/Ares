@@ -7,13 +7,21 @@
 #include "../Debug/Log.hh"
 #include "../Data/ResourceLoader.hh"
 #include "../Visual/Window.hh"
-#include "../Data/PlainText.hh"
+
+// FIXME TEST CODE - Remove this
+#include "GL33/Shader.hh"
+#include "../Data/Config.hh"
+// /FIXME
 
 namespace Ares
 {
 
 struct GfxModule::RenderData
 {
+    // FIXME TEST CODE - Remove this
+    GLuint testVAO;
+    GLuint testProgram;
+    // /FIXME
 };
 
 
@@ -21,6 +29,8 @@ GfxModule::GfxModule()
     : renderData_(nullptr), window_(nullptr)
 {
 }
+
+#define glog (*core.g().log)
 
 bool GfxModule::initWindow(Core& core)
 {
@@ -33,12 +43,12 @@ bool GfxModule::initWindow(Core& core)
     targetVideoMode.resolution = {800, 600};
     targetVideoMode.refreshRate = 0; // (don't care)
 
-    ARES_log(*core.log(), Trace, "Creating window");
+    ARES_log(glog, Trace, "Creating window");
 
     Window window(Window::GL33, targetVideoMode, "Ares");
     if(!window)
     {
-        ARES_log(*core.log(), Fatal, "Failed to create window");
+        ARES_log(glog, Fatal, "Failed to create window");
         return false;
     }
 
@@ -56,19 +66,19 @@ bool GfxModule::initGL(Core& core)
 
     if(majorVersion <= 0 || minorVersion <= 0)
     {
-        ARES_log(*core.log(), Error,
+        ARES_log(glog, Error,
                  "Could not query OpenGL version, context is too old or broken!");
         return false;
     }
 
     { // Some debug logging
-        ARES_log(*core.log(), Debug,
+        ARES_log(glog, Debug,
                  "Got OpenGL %d.%d [%s, %s]",
                  majorVersion, minorVersion, glGetString(GL_VERSION), glGetString(GL_VENDOR));
 
         static constexpr const char* checkStrs[] = { "no", "yes" };
 #define ARES_gfxLogHasGL(func) \
-        ARES_log(*core.log(), Trace, "Have %s? %s", #func, checkStrs[func != nullptr]);
+        ARES_log(glog, Trace, "Have %s? %s", #func, checkStrs[func != nullptr]);
 
         ARES_gfxLogHasGL(glMultiDrawElementsIndirect);
 
@@ -92,11 +102,75 @@ bool GfxModule::init(Core& core)
         return false;
     }
 
+    // FIXME TEST CODE - Remove
+    Ref<Config> cfgRef;
+    auto err = core.g().resLoader->load<Config>(cfgRef, "TestScreen.armat");
+    if(err)
+    {
+        ARES_log(glog, Error, "Config load error: %s", err);
+        return false;
+    }
+    const Config& cfg = *cfgRef;
+
+    glGenVertexArrays(1, &renderData_->testVAO); // FIXME VAO LEAKED!
+    glBindVertexArray(renderData_->testVAO);
+
+    const auto& vertSrc = cfg.get("shaders.vertSrc").value.string;
+    if(vertSrc.empty())
+    {
+        ARES_log(glog, Fatal, "Failed to load test vertex shader");
+        return false;
+    }
+
+    const auto& fragSrc = cfg.get("shaders.fragSrc").value.string;
+    if(fragSrc.empty())
+    {
+        ARES_log(glog, Fatal, "Failed to load test fragment shader");
+        return false;
+    }
+
+    GLuint testShaders[2];
+    auto vertErr = GL33::compileShader(testShaders[0], GL_VERTEX_SHADER, vertSrc.c_str());
+    if(vertErr)
+    {
+        ARES_log(glog, Fatal,
+                 "Failed to compile test vertex shader: %s",
+                 vertErr);
+        return false;
+    }
+    auto fragErr = GL33::compileShader(testShaders[1], GL_FRAGMENT_SHADER, fragSrc.c_str());
+    if(fragErr)
+    {
+        ARES_log(glog, Fatal,
+                 "Failed to compile test fragment shader: %s",
+                 fragErr);
+        return false;
+    }
+
+    auto linkErr = GL33::linkShaderProgram(renderData_->testProgram,
+                                           testShaders, testShaders + 2);
+    if(linkErr)
+    {
+        ARES_log(glog, Fatal,
+                 "Failed to link test shader program: %s",
+                 linkErr);
+    }
+
+    glDeleteShader(testShaders[0]);
+    glDeleteShader(testShaders[1]);
+
+    // /FIXME
+
     return true;
 }
 
 void GfxModule::halt(Core& core)
 {
+    // FIXME TEST CODE - Remove
+    glDeleteProgram(renderData_->testProgram); renderData_->testProgram = 0;
+    glDeleteVertexArrays(1, &renderData_->testVAO); renderData_->testVAO = 0;
+    // /FIXME
+
     delete window_; window_ = nullptr;
     delete renderData_; renderData_ = nullptr;
 }
@@ -123,10 +197,18 @@ void GfxModule::mainUpdate(Core& core)
     window_->beginFrame();
 
     // FIXME IMPLEMENT: Run rendering commands for the previous frame here
-    // FIXME TEST, remove this
+
+    // FIXME TEST CODE - Remove
+    auto resolution = window_->resolution();
+    glViewport(0, 0, resolution.width, resolution.height);
+
     glEnable(GL_FRAMEBUFFER_SRGB);
     glClearColor(0.2f, 0.4f, 0.6f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    glUseProgram(renderData_->testProgram);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    // /FIXME
 
     window_->endFrame();
 

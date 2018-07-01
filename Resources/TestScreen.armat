@@ -1,0 +1,27 @@
+[material]
+name = 'TestScreen'
+descr = '=== TEST SCREEN, DO NOT USE ==='
+
+[shaders]
+vertSrc = '#version 330 core
+
+out vec2 vo_UV;
+
+void main()
+{
+    vo_UV = vec2(float((gl_VertexID & 1) << 2),
+                 float((gl_VertexID & 2) << 1)) * 0.5;
+
+    gl_Position = vec4(vo_UV * 2.0 - 1.0, 0.0, 1.0);
+}
+'
+fragSrc = '#version 330 core
+
+in vec2 vo_UV;
+layout(location = 0) out vec4 fo_FragColor;
+
+void main()
+{
+    fo_FragColor = vec4(vo_UV, 0.0, 1.0);
+}
+'
