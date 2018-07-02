@@ -56,6 +56,7 @@ class TaskScheduler
     {
         Fiber* curFiber; ///< The fiber that is currently running on this worker.
         Fiber* doneFiber; ///< A fiber to free because it is done.
+        Fiber* finalFiber; ///< A "dead end" fiber to switch to when the worker thread is done.
         std::list<WaitingFiberSlot> waitingFibers; ///< The fibers waiting for a var on this worker.
     };
     WorkerData* workerData_;

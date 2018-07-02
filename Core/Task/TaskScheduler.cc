@@ -193,9 +193,11 @@ void TaskScheduler::workerLoop(TaskScheduler* scheduler)
     workerData.doneFiber = nullptr;
 
     Fiber localFiber;
+    workerData.finalFiber = &localFiber;
     localFiber.switchTo(*startFiber);
 
-    assert(false && "This should never be reached");
+    // When we reach here, the worker loop is done because `finalFiber` was resumed.
+    // The worker thread will terminate here.
 }
 
 void TaskScheduler::fiberFunc(void* data)
@@ -238,9 +240,11 @@ void TaskScheduler::fiberFunc(void* data)
 
     if(!scheduler->running_)
     {
-        // The scheduler is done running. Make this fiber end here: the worker
-        // thread will die with it
-        return;
+        // The scheduler is done running. Make this fiber switch to a "dead end"
+        // one: the worker thread will die with it
+        // **DO NOT SIMPLY RETURN HERE!**; FTL's `boost::context` code calls
+        // `exit(0)` if you don't explicitly exit from a fiber!
+        workerData.curFiber->switchTo(*workerData.finalFiber);
     }
 
     // Else we need to recurse back into `fiberFunc()`.
