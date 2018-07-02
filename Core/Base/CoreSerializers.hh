@@ -294,5 +294,22 @@ struct Serializer<Vec4>
     }
 };
 
+// ===== Refs ==================================================================
+template <typename T>
+struct Serializer<T>
+{
+    inline static bool serialize(const Ref<T>& value, std::ostream& stream)
+    {
+        // Refs are instance-specific and can't be properly serialized
+        return false;
+    }
+
+    inline static bool deserialize(Ref<T>& value, std::istream& stream)
+    {
+        // Refs are instance-specific and can't be properly deserialized
+        return false;
+    }
+};
+
 
 }
