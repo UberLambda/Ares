@@ -31,17 +31,7 @@ class Core
 private:
     std::atomic<State> state_;
 
-    struct ModuleSlot
-    {
-        Ref<Module> ref;
-        bool inited = false;
-
-        inline bool operator==(const ModuleSlot& other) const
-        {
-            return this->ref == other.ref;
-        }
-    };
-    std::vector<ModuleSlot> modules_;
+    std::vector<Ref<Module>> modules_;
 
     GlobalData globalData_;
     DoubleBuffered<FrameData> frameData_;
@@ -67,7 +57,8 @@ public:
 
 
     /// Attempts to initialize the core, then all of the modules attached to it;
-    /// returns `false` on error.
+    /// returns `false` on error. Modules that failed to init are detached from
+    /// the core.
     /// **Call this from the main thread!**
     /// On success, `state()` will switch to `Inited`.
     /// Does nothing and returns `true` if the core is already initalized.
@@ -122,7 +113,8 @@ public:
 
     /// Attempts to attachs the module to the core. If the core is already inited
     /// and/or running, also attempts to `init()` it after attaching it - logging
-    /// an error message on init error.
+    /// an error message on init error. Modules that failed to init are detached
+    /// from the core.
     /// Returns `false` and does nothing if the module is already attached or
     /// `module` is null.
     bool attachModule(Ref<Module> module);
@@ -133,6 +125,14 @@ public:
     /// Note that the module is just detached, not deleted; if `module`'s reference
     /// count is still > 0 the module will be kept in memory!
     bool detachModule(Ref<Module> module);
+
+    /// Returns the number of currently-attached modules.
+    /// Note that modules that fail to init are detached from the core, decreasing
+    /// this count.
+    inline size_t nAttachedModules() const
+    {
+        return modules_.size();
+    }
 };
 
 }

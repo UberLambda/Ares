@@ -33,9 +33,9 @@ Core::~Core()
     g().log->flush();
 
     // Detach and halt all modules that are still attached to the core
-    for(const ModuleSlot& module : modules_)
+    for(const auto& module : modules_)
     {
-        detachModule(module.ref);
+        detachModule(module);
     }
 
     // Perform one final log flush
@@ -120,13 +120,17 @@ bool Core::init()
 
     // [Re]initialize all modules that were attached to the core before it was
     // `init()`ed
-    for(ModuleSlot& module : modules_)
+    for(auto it = modules_.begin(); it != modules_.end();)
     {
-        (void)initModule(module.ref.get());
-        if(!module.inited)
+        bool itInited = initModule(it->get());
+        if(itInited)
         {
-            // The initialization of a module failed
-            return false;
+            it ++;
+        }
+        else
+        {
+            // Erase uninited module
+            it = modules_.erase(it);
         }
     }
 
@@ -151,27 +155,17 @@ bool Core::run()
     {
         // Schedule the update tasks for each module that can run on worker
         // threads; use `frameVar` as counter
-        for(ModuleSlot& module : modules_)
+        for(auto& module : modules_)
         {
-            if(!module.inited)
-            {
-                continue;
-            }
-
-            g().scheduler->schedule(module.ref->updateTask(*this), &frameVar);
+            g().scheduler->schedule(module->updateTask(*this), &frameVar);
         }
 
         // Update everything that has to be updated on the main thread for each
         // module; in the meantime, the worker tasks scheduled earlier are being
         // executed in the background...
-        for(ModuleSlot& module : modules_)
+        for(auto& module : modules_)
         {
-            if(!module.inited)
-            {
-                continue;
-            }
-
-            module.ref->mainUpdate(*this);
+            module->mainUpdate(*this);
         }
 
         // TODO: Do main thread stuff that HAS to be done once per frame here
@@ -227,44 +221,41 @@ bool Core::initModule(Module* module)
 
 bool Core::attachModule(Ref<Module> module)
 {
-    auto key = [&module](const ModuleSlot& slot)
-    {
-        return slot.ref == module;
-    };
-
-    if(!module || std::find_if(modules_.begin(), modules_.end(), key) != modules_.end())
+    if(!module || std::find(modules_.begin(), modules_.end(), module) != modules_.end())
     {
         return false;
     }
 
-    bool moduleInited = false;
+    bool ok = true;
     if(state_ != Dead)
     {
         // Core already inited/running, initialize module here
-        moduleInited = initModule(module.get()); // (may fail, logs errors)
+        ok = initModule(module.get()); // (may fail, logs errors)
     }
 
-    modules_.push_back({module, moduleInited}); // (increases refcount)
-    return true;
+    if(ok)
+    {
+        modules_.push_back(module); // (increases refcount)
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool Core::detachModule(Ref<Module> module)
 {
-    auto key = [&module](const ModuleSlot& slot)
-    {
-        return slot.ref == module;
-    };
-
-    auto it = std::find_if(modules_.begin(), modules_.end(), key);
+    auto it = std::find(modules_.begin(), modules_.end(), module);
     if(it == modules_.end())
     {
         return false;
     }
 
     ARES_log(glog, Trace,
-             "Halting and detaching module @%p", it->ref.get());
+             "Halting and detaching module @%p", it->get());
 
-    it->ref->halt(*this);
+    (*it)->halt(*this);
     modules_.erase(it);
     return true;
 }

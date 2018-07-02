@@ -36,7 +36,17 @@ static bool addCoreModulesAndFacilities()
     ARES_log(glog, Trace, "Attaching GfxModule");
     core.attachModule(intoRef<Module>(new GfxModule()));
 
-    return true;
+
+    if(core.nAttachedModules() == 1)
+    {
+        return true;
+    }
+    else
+    {
+        ARES_log(glog, Fatal,
+                 "Some module[s] or facilit[ies] failed to initialize, aborting!");
+        return false;
+    }
 }
 
 
@@ -52,13 +62,13 @@ int main(int argc, char** argv)
 
     glog.flush();
 
-    if(!addCoreModulesAndFacilities())
+    bool modsOk = addCoreModulesAndFacilities();
+    glog.flush();
+    if(!modsOk)
     {
         // Facility or module initialization error
         return EXIT_FAILURE;
     }
-
-    glog.flush();
 
     // Main loop, run on main thread. This will return only when the main loop is
     // done.
