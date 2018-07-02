@@ -32,30 +32,6 @@ GfxModule::GfxModule()
 
 #define glog (*core.g().log)
 
-bool GfxModule::initWindow(Core& core)
-{
-    // FIXME: The `Window` is to be shared between graphics and input, so it should
-    //        probably be managed by the `Core` in some way (like `requestFeature<Window>()`?)
-    //        Window creation code should *NOT* be here!
-    // TODO: Load videomode and title (app name) from config file
-    VideoMode targetVideoMode;
-    targetVideoMode.fullscreenMode = VideoMode::Windowed;
-    targetVideoMode.resolution = {800, 600};
-    targetVideoMode.refreshRate = 0; // (don't care)
-
-    ARES_log(glog, Trace, "Creating window");
-
-    Window window(Window::GL33, targetVideoMode, "Ares");
-    if(!window)
-    {
-        ARES_log(glog, Fatal, "Failed to create window");
-        return false;
-    }
-
-    window_ = new Window(std::move(window));
-    return true;
-}
-
 bool GfxModule::initGL(Core& core)
 {
     window_->beginFrame(); // Make OpenGL context current on this thread
@@ -92,8 +68,12 @@ bool GfxModule::init(Core& core)
 {
     renderData_ = new RenderData();
 
-    if(!initWindow(core))
+    window_ = core.g().facilities.get<Window>();
+    if(!window_ || !window_->operator bool())
     {
+        ARES_log(glog, Error,
+                 "GfxModule requires a Window facility but %s",
+                 window_ ? "it failed to initialize" : "it was not added");
         return false;
     }
 
@@ -171,8 +151,8 @@ void GfxModule::halt(Core& core)
     glDeleteVertexArrays(1, &renderData_->testVAO); renderData_->testVAO = 0;
     // /FIXME
 
-    delete window_; window_ = nullptr;
     delete renderData_; renderData_ = nullptr;
+    window_ = nullptr; // (will be destroyed by `Core`)
 }
 
 GfxModule::~GfxModule()

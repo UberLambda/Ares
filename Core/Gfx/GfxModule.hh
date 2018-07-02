@@ -10,14 +10,10 @@ class Window; // (#include "../Visual/Window.hh")
 /// A graphics + graphical input module.
 class GfxModule : public Module
 {
-    Window* window_; // FIXME: See `GfxModule::init()` implementation
+    Window* window_; // (retrieved from `core.g().facilities` on init)
 
     struct RenderData;
     RenderData* renderData_;
-
-    /// Attempts to initialize `window_`, returns `false` on error.
-    // TODO Selectable rendering API for the window
-    bool initWindow(Core& core);
 
     /// Attempts to initialize OpenGL, returns `false` on error.
     /// `window_` should be inited for OpenGL 3.3+.
