@@ -6,13 +6,12 @@
 #include <utility>
 #include "Base/DoubleBuffered.hh"
 #include "Base/Ref.hh"
+#include "Module/Module.hh"
 #include "GlobalData.hh"
 #include "FrameData.hh"
 
 namespace Ares
 {
-
-class Module; // (#include "Module/Module.hh" )
 
 /// An instance of Ares' engine core.
 ///
@@ -32,7 +31,18 @@ class Core
 private:
     std::atomic<State> state_;
 
-    std::vector<Ref<Module>> modules_;
+    struct ModuleSlot
+    {
+        Ref<Module> ref;
+        bool inited = false;
+
+        inline bool operator==(const ModuleSlot& other) const
+        {
+            return this->ref == other.ref;
+        }
+    };
+    std::vector<ModuleSlot> modules_;
+
     GlobalData globalData_;
     DoubleBuffered<FrameData> frameData_;
 

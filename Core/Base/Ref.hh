@@ -241,6 +241,22 @@ public:
     }
 
 
+    /// Returns `true` if this and `other` point to the same `T`, or are both null.
+    /// Threadsafe and lockless.
+    inline bool operator==(const Ref<T>& other) const
+    {
+        return data_.load() == other.data_.load();
+    }
+
+    /// Returns `true` if this and `other` point to different `T`s or one points
+    /// to a `T` and the other is null.
+    /// Threadsafe and lockless.
+    inline bool operator!=(const Ref<T>& other) const
+    {
+        return !operator==(other);
+    }
+
+
     /// Obtains a pointer to the inner `T` value, or null if this ref is null.
     /// Threadsafe and lockless.
     inline T* get()
