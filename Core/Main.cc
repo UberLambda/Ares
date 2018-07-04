@@ -4,6 +4,9 @@
 
 #include "Visual/Window.hh"
 #include "Gfx/GfxModule.hh"
+#ifndef NDEBUG
+#   include "Debug/DebugModule.hh"
+#endif
 
 using namespace Ares;
 
@@ -17,6 +20,9 @@ static Core core;
 /// Adds required facilities and modules to `core`. Returns `false` on error.
 static bool addCoreModulesAndFacilities()
 {
+    unsigned int nModulesAttachedHere = 0;
+
+
     // Window facility
     // TODO: Load videomode and title (app name) from config file
     VideoMode targetVideoMode;
@@ -35,9 +41,22 @@ static bool addCoreModulesAndFacilities()
     // GfxModule [requires Window facility]
     ARES_log(glog, Trace, "Attaching GfxModule");
     core.attachModule(intoRef<Module>(new GfxModule()));
+    nModulesAttachedHere ++;
+
+#ifndef NDEBUG
+    ARES_log(glog, Warning, "!! DEBUG BUILD !!");
+
+    // DebugModule
+    {
+        core.attachModule(intoRef<Module>(new DebugModule()));
+        nModulesAttachedHere ++;
+    }
+#else
+    ARES_log(glog, Trace, "Release/RelWithDebInfo build");
+#endif
 
 
-    if(core.nAttachedModules() == 1)
+    if(core.nAttachedModules() == nModulesAttachedHere)
     {
         return true;
     }

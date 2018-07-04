@@ -12,6 +12,8 @@ Log::Log(size_t messagePoolSize)
 
 Log::~Log()
 {
+    // Perform a final flush
+    flush();
 }
 
 

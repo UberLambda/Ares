@@ -219,6 +219,16 @@ void Core::halt()
 
 bool Core::initModule(Module* module)
 {
+    if(!module)
+    {
+        ARES_log(glog, Error, "Attempting to init a null module");
+        return false;
+    }
+
+    ARES_log(glog, Trace,
+             "Initializing module @%p", module);
+
+
     if(module->init(*this))
     {
         ARES_log(glog, Trace,

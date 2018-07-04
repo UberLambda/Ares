@@ -17,7 +17,7 @@ add_executable(Ares.Core ${ARES_WIN32}
     Task/TaskScheduler.cc
     Data/FileIO.cc Data/ResourceLoader.cc Data/ConfigResourceParser.cc
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
-    Debug/Log.cc
+    Debug/Log.cc Debug/DebugModule.cc
     Mem/Mem.cc Mem/MallocOverrides.cc Mem/NewOverrides.cc
     Scene/Scene.cc
     Gfx/GfxModule.cc Gfx/GL33/Shader.cc
@@ -86,7 +86,10 @@ else()
     set(ARES_HAS_RPMALLOC false)
 endif()
 
-set(ARES_HAS_PTHREADS true)  # Use POSIX threads everywhere
+if(NOT MSVC)
+    # Use POSIX threads everywhere but MSVC, incl. MinGW
+    set(ARES_HAS_PTHREADS true)
+endif()
 
 # ===== BuildConfig.h.in =======================================================
 

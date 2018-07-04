@@ -1,5 +1,8 @@
 #pragma once
 
+// `ARES_PLATFORM_[X]`: Platform Ares is compiled for is/supports [X]?
 #cmakedefine ARES_PLATFORM_BIG_ENDIAN
+
+// `ARES_HAS_[X]`: Ares was linked to library [X]?
 #cmakedefine ARES_HAS_RPMALLOC
 #cmakedefine ARES_HAS_PTHREADS
