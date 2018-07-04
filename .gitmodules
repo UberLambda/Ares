@@ -7,3 +7,6 @@
 [submodule "Core/3rdparty/concurrentqueue"]
 	path = Core/3rdparty/concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue
+[submodule "Core/3rdparty/rpmalloc"]
+	path = Core/3rdparty/rpmalloc
+	url = https://github.com/rampantpixels/rpmalloc

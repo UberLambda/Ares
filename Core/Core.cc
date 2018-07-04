@@ -6,6 +6,7 @@
 #include "Scene/Scene.hh"
 #include "Data/FolderFileStore.hh"
 #include "Data/ResourceLoader.hh"
+#include "Mem/MemStats.hh"
 #include "Module/Module.hh"
 #include "CoreConfig.h"
 
@@ -41,7 +42,13 @@ Core::~Core()
     // Perform one final log flush
     g().log->flush();
 
-    // `~GlobalData()` and `~FrameData()` invocations will free all resources
+    // Free GlobalData's resources
+    delete g().resLoader;
+    delete g().scene;
+    delete g().scheduler;
+    delete g().log;
+
+    // `~DoubleBuffer<FrameData>()` will free everything else
 }
 
 
@@ -67,7 +74,7 @@ bool Core::init()
 
     // Log
     {
-        g().log.reset(new Log(ARES_CORE_LOG_MESSAGE_POOL_CAPACITY));
+        g().log = new Log(ARES_CORE_LOG_MESSAGE_POOL_CAPACITY);
 
 #define glog (*g().log)
 
@@ -80,11 +87,18 @@ bool Core::init()
 
     ARES_log(glog, Info, "Init");
 
+    // Mem
+    {
+        ARES_log(glog, Debug,
+                 "Memory allocator: %s",
+                 memBackendName());
+    }
+
     // Task scheduler
     {
-        g().scheduler.reset(new TaskScheduler(TaskScheduler::optimalNWorkers(),
-                                                   ARES_CORE_SCHEDULER_FIBER_POOL_CAPACITY,
-                                                   ARES_CORE_SCHEDULER_FIBER_STACK_SIZE));
+        g().scheduler = new TaskScheduler(TaskScheduler::optimalNWorkers(),
+                                          ARES_CORE_SCHEDULER_FIBER_POOL_CAPACITY,
+                                          ARES_CORE_SCHEDULER_FIBER_STACK_SIZE);
 
         ARES_log(glog, Debug,
                  "Task scheduler: %u worker threads, %u fibers, %.1f KB fiber stacks",
@@ -98,7 +112,7 @@ bool Core::init()
 
     // Scene
     {
-        g().scene.reset(new Scene(ARES_CORE_SCENE_ENTITY_CAPACITY));
+        g().scene = new Scene(ARES_CORE_SCENE_ENTITY_CAPACITY);
 
         ARES_log(glog, Debug,
                  "Scene: %lu max entities",
@@ -115,7 +129,7 @@ bool Core::init()
                  "ResourceLoader: Using FolderFileStore with root %s",
                  folderFileStore->root());
 
-        g().resLoader.reset(new ResourceLoader(std::move(fileStore)));
+        g().resLoader = new ResourceLoader(std::move(fileStore));
     }
 
     // [Re]initialize all modules that were attached to the core before it was

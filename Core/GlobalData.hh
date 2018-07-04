@@ -23,16 +23,16 @@ class ResourceLoader; // (#include "Data/ResourceLoader.hh")
 struct GlobalData
 {
     /// The main engine log.
-    std::unique_ptr<Log> log;
+    Log* log;
 
     /// The task scheduler for the engine.
-    std::unique_ptr<TaskScheduler> scheduler;
+    TaskScheduler* scheduler;
 
     /// The scene where the action is taking place.
-    std::unique_ptr<Scene> scene;
+    Scene* scene;
 
     /// The main resource loader.
-    std::unique_ptr<ResourceLoader> resLoader;
+    ResourceLoader* resLoader;
 
     /// Any of the engine's extra, ondemand facilities (`Window`, ...).
     TypeMap facilities;

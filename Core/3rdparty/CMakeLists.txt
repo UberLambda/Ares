@@ -1,3 +1,7 @@
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
+string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
+
+
 # == GLFW (3.x) == Upstream: https://github.com/glfw/glfw == License: zlib
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -52,3 +56,23 @@ target_link_libraries(flextgl PUBLIC ${OPENGL_gl_LIBRARY} glfw)
 # == License: Boost 1.0
 add_library(tinyformat INTERFACE)
 target_include_directories(tinyformat INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/tinyformat/")
+
+# == rpmalloc (optional)
+# == Upstream: https://github.com/rampantpixels/rpmalloc [in-tree, custom build steps]
+# == License: public domain
+option(ARES_USE_RPMALLOC "Use rpmalloc instead of the default memory allocator" ON)
+if(ARES_USE_RPMALLOC)
+    set(RPMALLOC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/rpmalloc")
+
+    add_library(rpmalloc STATIC "${RPMALLOC_ROOT}/rpmalloc/rpmalloc.c")
+    target_include_directories(rpmalloc PUBLIC "${RPMALLOC_ROOT}/")
+    target_compile_definitions(rpmalloc PUBLIC ENABLE_STATISTICS=1)
+
+    if(BUILD_TYPE MATCHES DEBUG)
+        # Disable rpmalloc's assertions in Release/RelWithDebInfo
+        # Otherwise, NDEBUG would get #undef'd in rpmalloc.c, causing assertions
+        # to trigger even in release builds!
+        target_compile_definitions(rpmalloc PUBLIC ENABLE_ASSERTS=1)
+    endif()
+endif()
+

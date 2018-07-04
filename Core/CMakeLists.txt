@@ -1,14 +1,24 @@
 # Ares.Core - The engine core
 
+string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
 
 # ===== Source files and base build options/steps ==============================
 
-add_executable(Ares.Core WIN32
+if(BUILD_TYPE MATCHES "DEBUG|DEBWITHRELINFO")
+    message("Debug/RelWithDebInfo build, WIN32 console window will be shown")
+    set(ARES_WIN32)
+else()
+    # Make Release/RelWithDebInfo builds not have a console window
+    set(ARES_WIN32 WIN32)
+endif()
+
+add_executable(Ares.Core ${ARES_WIN32}
     Main.cc Core.cc
     Task/TaskScheduler.cc
     Data/FileIO.cc Data/ResourceLoader.cc Data/ConfigResourceParser.cc
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
     Debug/Log.cc
+    Mem/Mem.cc Mem/MallocOverrides.cc Mem/NewOverrides.cc
     Scene/Scene.cc
     Gfx/GfxModule.cc Gfx/GL33/Shader.cc
 )
@@ -21,7 +31,6 @@ set_target_properties(Ares.Core PROPERTIES
 
 option(ARES_STRIP_EXECUTABLE "Strip Ares executables in release build" ON)
 if(ARES_STRIP_EXECUTABLE)
-    string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
     if(BUILD_TYPE MATCHES RELEASE AND NOT MSVC)
         message("Release binary, stripping executables")
 
@@ -40,18 +49,6 @@ else()
 endif()
 
 
-# ===== BuildConfig.h.in =======================================================
-
-include(TestBigEndian)
-test_big_endian(ARES_PLATFORM_BIG_ENDIAN)
-
-configure_file(BuildConfig.h.in "${CMAKE_CURRENT_BINARY_DIR}/Ares/BuildConfig.h"
-               ESCAPE_QUOTES
-               @ONLY
-               NEWLINE_STYLE UNIX)
-target_include_directories(Ares.Core PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
-
-
 # ===== Comp generation ========================================================
 
 find_package(PythonInterp 3.5 REQUIRED)
@@ -66,9 +63,10 @@ add_dependencies(Ares.Core Ares.Core.gencomps)
 # Note: ${CMAKE_CURRENT_BINARY_DIR} already included by generating BuildConfig.h.in
 
 
-# ===== Libraries to link ======================================================
+# ===== Libraries to link, build flags =========================================
 
 add_subdirectory(3rdparty/)
+
 target_link_libraries(Ares.Core PUBLIC
     glfw
     glm
@@ -78,3 +76,27 @@ target_link_libraries(Ares.Core PUBLIC
     flextgl
     tinyformat
 )
+
+if(TARGET rpmalloc)
+    message("Using rpmalloc for memory allocation")
+    set(ARES_HAS_RPMALLOC true)
+    target_link_libraries(Ares.Core PUBLIC rpmalloc)
+else()
+    message("rpmalloc disabled, falling back to standard allocator")
+    set(ARES_HAS_RPMALLOC false)
+endif()
+
+set(ARES_HAS_PTHREADS true)  # Use POSIX threads everywhere
+
+# ===== BuildConfig.h.in =======================================================
+
+include(TestBigEndian)
+test_big_endian(ARES_PLATFORM_BIG_ENDIAN)
+
+configure_file(BuildConfig.h.in "${CMAKE_CURRENT_BINARY_DIR}/Ares/BuildConfig.h"
+               ESCAPE_QUOTES
+               @ONLY
+               NEWLINE_STYLE UNIX)
+target_include_directories(Ares.Core PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
+
+

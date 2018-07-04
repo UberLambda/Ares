@@ -1,3 +1,5 @@
 #pragma once
 
 #cmakedefine ARES_PLATFORM_BIG_ENDIAN
+#cmakedefine ARES_HAS_RPMALLOC
+#cmakedefine ARES_HAS_PTHREADS
