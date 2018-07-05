@@ -10,3 +10,6 @@
 [submodule "Core/3rdparty/rpmalloc"]
 	path = Core/3rdparty/rpmalloc
 	url = https://github.com/rampantpixels/rpmalloc
+[submodule "Core/3rdparty/plthook"]
+	path = Core/3rdparty/plthook
+	url = https://github.com/kubo/plthook

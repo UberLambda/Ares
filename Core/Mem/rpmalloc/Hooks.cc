@@ -1,9 +1,9 @@
-// Global override of `pthread_create` to make threads rpmalloc-aware
+// Global override of `pthread_create()`, `malloc()`, `free()`... to make threads
+// and the standard library used rpmalloc
 // See "rpmalloc/malloc.c" (public domain)
 
 #ifdef _MSC_VER
 #   error "pthread_create override only supported on GCC/clang/MinGW!"
-//  Not a problem really, considering that MSVC would not use winpthreads anyways...
 #endif
 
 #include <stdlib.h>
@@ -12,7 +12,6 @@
 #include "Globals.hh"
 #include "../../Base/Platform.h"
 
-
 // Attribute of a function that is to be run when an executable/shared library is loaded
 // **WARNING**: place it inbetween the return type and the function name!
 #define ARES_INIT_HOOK __attribute__((constructor))
@@ -20,6 +19,11 @@
 // Attribute of a function that is to be run when an executable/shared library is unloaded
 // **WARNING**: place it inbetween the return type and the function name!
 #define ARES_HALT_HOOK __attribute__((destructor))
+
+#ifdef NDEBUG
+//  Keep asserts even in release for this .cc file
+#   undef NDEBUG
+#endif
 
 
 namespace Ares
@@ -167,17 +171,34 @@ typedef extern "C" struct interpose_s
 
 MAC_INTERPOSE(ARES_pthread_create, pthread_create);
 
+// FIXME Also interpose `malloc()`, `calloc()`, `realloc()`, `free()` and `aligned_malloc()`...
+//       At this point, actually use the same `plt_hook` code for windows!!
+
 #elif defined(ARES_PLATFORM_IS_WINDOWS)
 // Windows + winpthreads and MinGW[-like] compiler.
-//  Implement `pthread_create`, use it to shadow winpthreads' one.
-//  In it, use the Win32 API to get the address of the real `pthread_create` in
-//  winpthreads and launch a rpmalloc-aware thread.
+// HACK !!
+// Implement a rpmalloc-aware `pthread_create`, shadowing the one linked in
+// from "libstdc++-6.dll" by IAT hijacking.
+// Then do the same to the `malloc()`, `calloc()`, `realloc()`, `free()`
+// and `_aligned_malloc()` that any loaded module (such as "libstdc++-6.dll")
+// requires. The whole C standard library/C++ standard library/Windows APIs... will
+// then use rpmalloc!
 #   define WIN32_LEAN_AND_MEAN
 #   include <windows.h>
+#   include <stdio.h>
+#   include <plthook/plthook.h>
 
-extern "C" int pthread_create(pthread_t* thread, const pthread_attr_t* attr,
-                              void*(*func)(void*), void* arg)
+namespace Ares
 {
+
+// Used to shadow the system's `pthread_create`
+extern "C" int ARES_pthread_create(pthread_t* thread, const pthread_attr_t* attr,
+                                   void*(*func)(void*), void* arg)
+{
+#ifndef NDEBUG
+    fprintf(stderr, "Ares Mem: patched `pthread_init()` called\n");
+#endif
+
     rpmalloc_thread_initialize(); // Initalize the caller thread if not already done
 
     auto startData = (Ares::ThreadStartData*)rpmalloc(sizeof(Ares::ThreadStartData));
@@ -185,13 +206,85 @@ extern "C" int pthread_create(pthread_t* thread, const pthread_attr_t* attr,
     startData->arg = arg;
 
     HMODULE libwinpthread = GetModuleHandle("libwinpthread-1");
-    assert(libwinpthread && "Failed to get a handle to libwinpthread-1.dll");
+    assert(libwinpthread && "Failed to get a handle to libwinpthread-1.dll!");
 
     auto sysPthreadCreate = (PFN_pthread_create)GetProcAddress(libwinpthread, "pthread_create");
-    assert(sysPthreadCreate && "Failed to load pthread_create!");
+    assert(sysPthreadCreate && "Failed to get address of libwinpthread-1.dll's `pthread_create()`!");
 
     return sysPthreadCreate(thread, attr, Ares::rpmallocThreadFunc, startData);
     // `startData` will be deallocated by `rpmallocThreadFunc`
+}
+
+
+/// A function to hijack (hook) in a module.
+extern "C" struct Hijack
+{
+    const char* funcName; ///< The name of the function to hook.
+    void* hijackFunc; ///< A pointer to the function to substitute to the real one.
+};
+
+/// The list of functions to hijack in Ares' .exe modules.
+static constexpr const Hijack gHijackTable[] =
+{
+    {"malloc", (void*)Ares::malloc},
+    {"calloc", (void*)Ares::calloc},
+    {"realloc", (void*)Ares::realloc},
+    {"aligned_alloc", (void*)Ares::aligned_alloc},
+    {"_aligned_malloc", (void*)Ares::aligned_alloc},
+    {"free", (void*)Ares::free},
+    {"_aligned_free", (void*)Ares::free},
+    {"pthread_create", (void*)Ares::ARES_pthread_create},
+    {nullptr, nullptr}, // (ending entry)
+};
+
+void ARES_INIT_HOOK memHookAll()
+{
+    // Hijack a select few self (Ares' .exe) modules
+    // Hijacking other modules (exp. `libgcc_s_seh.dll`, for instance) could cause
+    // problems like infinite recursion between `pthread_create()` -> `Ares::calloc()` -> `pthread_create()`...
+    // and is thus frowned upon
+    // TODO: Fix the calloc() -> winpthread TLS init -> calloc() -> ... cycle and
+    //       use psapi to query and patch the IAT of every module for the current process
+    HMODULE modulesToHijack[] =
+    {
+        GetModuleHandle(nullptr), // (Ares' .exe itself)
+        GetModuleHandle("libstdc++-6"),
+        GetModuleHandle("libwinpthread"),
+    };
+    const unsigned int nModulesToHijack = sizeof(modulesToHijack) / sizeof(HMODULE);
+
+    // Apply all hooks
+    plthook_t* hijacker;
+    for(HMODULE* it = modulesToHijack;
+        it < modulesToHijack + nModulesToHijack;
+        it ++)
+    {
+        HMODULE module = *it;
+        fprintf(stderr, "Ares Mem: patching IAT of %p", module);
+
+        if(plthook_open_by_handle(&hijacker, module) != 0)
+        {
+            fprintf(stderr,
+                    "Ares Mem: could not open %p for IAT patching: %s\n", module, plthook_error());
+            continue;
+        }
+
+        for(const Hijack* hijack = gHijackTable; hijack->funcName != nullptr; hijack ++)
+        {
+            (void)plthook_replace(hijacker, hijack->funcName, hijack->hijackFunc, nullptr);
+            // If `plthook_replace` returns a non-zero exit code it's not really an error;
+            // more likely, this module does not need `funcName` and thus there is nothing
+            // in the IAT to patch
+        }
+
+        plthook_close(hijacker);
+    }
+
+    fprintf(stderr, "Ares Mem: IAT of module[s] patched\n");
+}
+
+// TODO Implement `void ARES_HALT_HOOK memUnhookAll()` that undoes `memHookAll()`'s work?
+
 }
 
 #else

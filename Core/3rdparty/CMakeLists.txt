@@ -1,6 +1,9 @@
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
 
+# Prefer static libraries when possible
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
 
 # == GLFW (3.x) == Upstream: https://github.com/glfw/glfw == License: zlib
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -76,3 +79,22 @@ if(ARES_USE_RPMALLOC)
     endif()
 endif()
 
+# == plthook
+# == Upstream: https://github.com/kubo/plthook [in-tree, custom build steps]
+# == License: BSD 2-clause
+if(WIN32)
+    set(PLTHOOK_SOURCE_FILE "plthook_win32.c")
+    set(PLTHOOK_DEPS
+        dbghelp  # for ImageDirectoryEntryToData
+    )
+elseif(APPLE)
+    set(PLTHOOK_SOURCE_FILE "plthook_osx.c")
+    set(PLTHOOK_DEPS "")
+else()
+    set(PLTHOOK_SOURCE_FILE "plthook_elf.c")
+    set(PLTHOOK_DEPS "")
+endif()
+
+add_library(plthook STATIC "${CMAKE_CURRENT_SOURCE_DIR}/plthook/${PLTHOOK_SOURCE_FILE}")
+target_include_directories(plthook PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(plthook PUBLIC ${PLTHOOK_DEPS})

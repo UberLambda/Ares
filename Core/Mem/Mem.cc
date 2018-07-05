@@ -4,15 +4,7 @@
 //  rpmalloc mem backend
 #   include "rpmalloc/MemStats.cc"
 #   include "rpmalloc/MemFuncs.cc"
-#   ifdef ARES_HAS_PTHREADS
-//      Replaces `pthread_create` with a rpmalloc-aware one and adds pre-main/post-main
-//      hooks to each shared library/executable using rpmalloc
-#       include "rpmalloc/PThreadOverrides.cc"
-#   else
-//      Need some kind of hook to init/deinit rpmalloc per-thread, but don't know
-//      how without pthreads
-#       error "defined(ARES_HAS_RPMALLOC) but !defined(ARES_HAS_PTHREADS)"
-#   endif
+#   include "rpmalloc/Hooks.cc"
 #else
 //  stdlib mem backend
 #   include "stdlib/MemStats.cc"
