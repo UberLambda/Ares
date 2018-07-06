@@ -81,7 +81,13 @@ target_link_libraries(Ares.Core PUBLIC
 if(TARGET rpmalloc)
     message("Using rpmalloc for memory allocation")
     set(ARES_HAS_RPMALLOC true)
-    target_link_libraries(Ares.Core PUBLIC rpmalloc)
+
+    set(RPMALLOC_LIBS rpmalloc)
+    if(WIN32)
+        # Required for IAT hooking, see "Mem/rpmalloc/Hooks.cc"
+        set(RPMALLOC_LIBS ${RPMALLOC_LIBS} psapi)
+    endif()
+    target_link_libraries(Ares.Core PUBLIC ${RPMALLOC_LIBS})
 else()
     message("rpmalloc disabled, falling back to standard allocator")
     set(ARES_HAS_RPMALLOC false)
@@ -90,6 +96,13 @@ endif()
 if(NOT MSVC)
     # Use POSIX threads everywhere but MSVC, incl. MinGW
     set(ARES_HAS_PTHREADS true)
+endif()
+
+if(BUILD_TYPE MATCHES RELEASE|RELWITHDEBINFO)
+    # Force -DNDEBUG on release, relwithdebinfo builds
+    target_compile_definitions(Ares.Core PUBLIC
+        NDEBUG
+    )
 endif()
 
 # ===== BuildConfig.h.in =======================================================

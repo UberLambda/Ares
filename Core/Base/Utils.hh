@@ -8,6 +8,7 @@
 //  MSVC
 #   include <intrin.h>
 #endif
+#include "NumTypes.hh"
 
 namespace Ares
 {

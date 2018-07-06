@@ -11,6 +11,7 @@
 
 #include "Globals.hh"
 #include "../../Base/Platform.h"
+#include "../../Base/Utils.hh"
 
 // Attribute of a function that is to be run when an executable/shared library is loaded
 // **WARNING**: place it inbetween the return type and the function name!
@@ -185,6 +186,7 @@ MAC_INTERPOSE(ARES_pthread_create, pthread_create);
 // then use rpmalloc!
 #   define WIN32_LEAN_AND_MEAN
 #   include <windows.h>
+#   include <psapi.h>
 #   include <stdio.h>
 #   include <plthook/plthook.h>
 
@@ -195,9 +197,7 @@ namespace Ares
 extern "C" int ARES_pthread_create(pthread_t* thread, const pthread_attr_t* attr,
                                    void*(*func)(void*), void* arg)
 {
-#ifndef NDEBUG
-    fprintf(stderr, "Ares Mem: patched `pthread_init()` called\n");
-#endif
+    fprintf(stderr, "Ares Mem: patched `pthread_create()` called\n");
 
     rpmalloc_thread_initialize(); // Initalize the caller thread if not already done
 
@@ -239,19 +239,33 @@ static constexpr const Hijack gHijackTable[] =
 
 void ARES_INIT_HOOK memHookAll()
 {
-    // Hijack a select few self (Ares' .exe) modules
-    // Hijacking other modules (exp. `libgcc_s_seh.dll`, for instance) could cause
-    // problems like infinite recursion between `pthread_create()` -> `Ares::calloc()` -> `pthread_create()`...
-    // and is thus frowned upon
-    // TODO: Fix the calloc() -> winpthread TLS init -> calloc() -> ... cycle and
-    //       use psapi to query and patch the IAT of every module for the current process
-    HMODULE modulesToHijack[] =
+    // Hijack all modules attached to the current .exe
+    HANDLE selfProc = GetCurrentProcess();
+
+    HMODULE modulesToHijack[1024];
+    DWORD sizeofModulesToHijack = 0;
+
+    BOOL ok = EnumProcessModules(selfProc,
+                                 modulesToHijack, sizeof(modulesToHijack),
+                                 &sizeofModulesToHijack);
+    assert(ok && "Ares Me: Failed to get handles to modules attached to self .exe!");
+
+    unsigned int nModulesToHijack = sizeofModulesToHijack / sizeof(HMODULE);
+    fprintf(stderr, "Ares Mem: patching IAT of %u modules\n", nModulesToHijack);
+
+
+    // FIXME TLS in `libgcc_s_seh` invokes `calloc()` internally, which at this
+    //       pointer would be hijacked to be `Ares::calloc()`. `Ares::calloc()`
+    //       invokes `rpmalloc_thread_init()`, which will use TLS, which will try
+    //       calling `calloc() === Ares::calloc()`... in an infinite recursion!
+    //       A way to "fix" this is ignore replacing any allocation/deallocation
+    //       functions in libwinpthread-1.dll and libgcc_s_seh-1.dll, making them
+    HMODULE ignoredModules[] =
     {
-        GetModuleHandle(nullptr), // (Ares' .exe itself)
-        GetModuleHandle("libstdc++-6"),
-        GetModuleHandle("libwinpthread"),
+        GetModuleHandle("libwinpthread-1"),
+        GetModuleHandle("libgcc_s_seh-1"),
     };
-    const unsigned int nModulesToHijack = sizeof(modulesToHijack) / sizeof(HMODULE);
+
 
     // Apply all hooks
     plthook_t* hijacker;
@@ -260,7 +274,15 @@ void ARES_INIT_HOOK memHookAll()
         it ++)
     {
         HMODULE module = *it;
-        fprintf(stderr, "Ares Mem: patching IAT of %p", module);
+
+        // See FIXME above
+        bool doIgnoreModule = any(ignoredModules,
+                                  ignoredModules + sizeof(ignoredModules) / sizeof(HMODULE),
+                                  [module](HMODULE ignoredModule) { return module == ignoredModule; });
+        if(doIgnoreModule)
+        {
+            continue;
+        }
 
         if(plthook_open_by_handle(&hijacker, module) != 0)
         {
