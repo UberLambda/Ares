@@ -345,7 +345,8 @@ static bool readAnyValue(ConfigValue& outValue, ErrString& outErr, std::istream&
 
 
 
-ErrString ResourceParser<Config>::parse(Config& outCfg, std::istream& stream, const char* ext)
+ErrString ResourceParser<Config>::parse(Config& outCfg, std::istream& stream, const char* ext,
+                                        ResourceLoader& loader)
 {
     // TODO IMPORTANT ENHANCEMENT Include caret positions in parsing errors!
     std::string section(""), key, line;

@@ -72,6 +72,14 @@ public:
     ResourceLoader(Ref<FileStore> fileStore);
     ~ResourceLoader();
 
+
+    /// Returns a reference to the resource loaders' underlying file store.
+    inline Ref<FileStore> fileStore()
+    {
+        return fileStore_;
+    }
+
+
     /// Attempts to parse and load a resource of type `T` in memory.
     /// Returns a non-empty `ErrString` on error, leaving `outRef` unchanged.
     ///
@@ -86,13 +94,13 @@ public:
             // `resourceStores` lock scope
             std::lock_guard<std::mutex> storesLock(resourceStoresLock_);
 
-            if(!resourceStores_.get<ResourceStore<T>>())
+            store = resourceStores_.get<ResourceStore<T>>();
+            if(!store)
             {
                 // `ResourceStore` for Ts missing, create one
-                resourceStores_.add<ResourceStore<T>>();
+                (void)resourceStores_.add<ResourceStore<T>>();
+                store = resourceStores_.get<ResourceStore<T>>();
             }
-
-            store = resourceStores_.get<ResourceStore<T>>();
         }
 
         {
@@ -123,7 +131,8 @@ public:
         // TODO Allocate resource in a contiguous memory region, not scattering
         //      them on the heap!
         auto resource = makeRef<T>();
-        ErrString parsingErr = ResourceParser<T>::parse(*resource, *stream, fileExt);
+        ErrString parsingErr = ResourceParser<T>::parse(*resource, *stream, fileExt,
+                                                        *this);
 
         fileStore_->freeStream(stream); // (assumed to be threadsafe)
 

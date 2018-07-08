@@ -13,7 +13,8 @@ using PlainText = std::string;
 template <>
 struct ResourceParser<PlainText>
 {
-    static ErrString parse(PlainText& outResource, std::istream& stream, const char* ext)
+    static ErrString parse(PlainText& outResource, std::istream& stream, const char* ext,
+                           ResourceLoader& loader)
     {
         stream.seekg(0, std::ios::end);
         outResource.resize(stream.tellg());

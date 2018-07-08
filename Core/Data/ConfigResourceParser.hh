@@ -10,7 +10,8 @@ namespace Ares
 template <>
 struct ResourceParser<Config>
 {
-    static ErrString parse(Config& outCfg, std::istream& stream, const char* ext);
+    static ErrString parse(Config& outCfg, std::istream& stream, const char* ext,
+                           ResourceLoader& loader);
 };
 
 }
