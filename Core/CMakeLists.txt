@@ -75,6 +75,7 @@ target_link_libraries(Ares.Core PUBLIC
     vulkan
     flextgl
     tinyformat
+    tinygltf
     plthook
 )
 

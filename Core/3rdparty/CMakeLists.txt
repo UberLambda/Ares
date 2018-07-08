@@ -98,3 +98,14 @@ endif()
 add_library(plthook STATIC "${CMAKE_CURRENT_SOURCE_DIR}/plthook/${PLTHOOK_SOURCE_FILE}")
 target_include_directories(plthook PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(plthook PUBLIC ${PLTHOOK_DEPS})
+
+
+# == tinygltf
+# == Upstream: https://github.com/syoyo/tinygltf [in-tree]
+# == License: MIT
+add_library(tinygltf STATIC tinygltf.cc)
+target_include_directories(tinygltf PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tinygltf/")
+target_compile_definitions(tinygltf INTERFACE
+    TINYGLTF_NOEXCEPTION
+    JSON_NOEXCEPTION
+)

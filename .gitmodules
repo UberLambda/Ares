@@ -13,3 +13,6 @@
 [submodule "Core/3rdparty/plthook"]
 	path = Core/3rdparty/plthook
 	url = https://github.com/kubo/plthook
+[submodule "Core/3rdparty/tinygltf"]
+	path = Core/3rdparty/tinygltf
+	url = https://github.com/syoyo/tinygltf
