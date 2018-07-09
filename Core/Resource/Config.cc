@@ -1,4 +1,4 @@
-#include "ConfigResourceParser.hh"
+#include "Config.hh"
 
 #include <ctype.h>
 #include <string.h>

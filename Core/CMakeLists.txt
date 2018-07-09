@@ -15,12 +15,13 @@ endif()
 add_executable(Ares.Core ${ARES_WIN32}
     Main.cc Core.cc
     Task/TaskScheduler.cc
-    Data/FileIO.cc Data/ResourceLoader.cc Data/ConfigResourceParser.cc
+    Data/FileIO.cc Data/ResourceLoader.cc
+    Resource/Gltf.cc Resource/Config.cc
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
     Debug/Log.cc Debug/DebugModule.cc
     Mem/Mem.cc Mem/MallocOverrides.cc Mem/NewOverrides.cc
     Scene/Scene.cc
-    Gfx/GfxModule.cc Gfx/Gltf.cc Gfx/GL33/Shader.cc Gfx/GL33/GBuffer.cc
+    Gfx/GfxModule.cc Gfx/GL33/Shader.cc Gfx/GL33/GBuffer.cc
 )
 set_target_properties(Ares.Core PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/build/"

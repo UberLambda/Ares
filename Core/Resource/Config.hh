@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <utility>
 #include "../Base/NumTypes.hh"
+#include "../Data/ResourceParser.hh"
 
 namespace Ares
 {
@@ -126,5 +127,14 @@ public:
         return end();
     }
 };
+
+/// Implementation of `ResourceParser` for `Config`s.
+template <>
+struct ResourceParser<Config>
+{
+    static ErrString parse(Config& outCfg, std::istream& stream, const char* ext,
+                           ResourceLoader& loader);
+};
+
 
 }
