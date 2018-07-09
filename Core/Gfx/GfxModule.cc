@@ -1,27 +1,27 @@
 #include "GfxModule.hh"
 
 #include <utility>
-#include <flextGL.h>
-#include "GLFW/glfw3.h"
 #include "../Core.hh"
 #include "../Debug/Log.hh"
 #include "../Data/ResourceLoader.hh"
 #include "../Visual/Window.hh"
 
-// FIXME TEST CODE - Remove this
-#include "GL33/Shader.hh"
-#include "../Data/Config.hh"
-// /FIXME
+#include <flextGL.h>
+#include "GL33/GBuffer.hh"
 
 namespace Ares
 {
 
 struct GfxModule::RenderData
 {
-    // FIXME TEST CODE - Remove this
-    GLuint testVAO;
-    GLuint testProgram;
-    // /FIXME
+    GLuint mainVAO;
+    GL33::GBuffer gBuffer;
+
+    ~RenderData()
+    {
+        glDeleteVertexArrays(1, &mainVAO); mainVAO = 0;
+        // Other data will be destroyed by {`~GBuffer()`}
+    }
 };
 
 
@@ -34,6 +34,8 @@ GfxModule::GfxModule()
 
 bool GfxModule::initGL(Core& core)
 {
+    ARES_log(glog, Trace, "Initializing OpenGL");
+
     window_->beginFrame(); // Make OpenGL context current on this thread
 
     int majorVersion = -1, minorVersion = -1;
@@ -64,6 +66,31 @@ bool GfxModule::initGL(Core& core)
     return true;
 }
 
+bool GfxModule::initGBuffer(Core& core, Resolution resolution)
+{
+    ARES_log(glog, Trace, "Setting up G-Buffer");
+
+    renderData_->gBuffer = GL33::GBuffer(resolution,
+    {
+        {GL_RGBA, GL_RGBA8}, // Albedo
+        {GL_RGBA, GL_RGB10_A2}, // Normal
+    });
+
+    if(renderData_->gBuffer)
+    {
+        return true;
+    }
+    else
+    {
+        ARES_log(glog, Error,
+                 "Failed to initialize G-Buffer (FBO status: %u)!",
+                 glCheckFramebufferStatus(GL_FRAMEBUFFER));
+        return false;
+    }
+
+    return true;
+}
+
 bool GfxModule::init(Core& core)
 {
     renderData_ = new RenderData();
@@ -82,76 +109,19 @@ bool GfxModule::init(Core& core)
         return false;
     }
 
-    // FIXME TEST CODE - Remove
-    Ref<Config> cfgRef;
-    auto err = core.g().resLoader->load<Config>(cfgRef, "TestScreen.armat");
-    if(err)
+    glGenVertexArrays(1, &renderData_->mainVAO);
+
+    if(!initGBuffer(core, window_->resolution()))
     {
-        ARES_log(glog, Error, "Config load error: %s", err);
         return false;
     }
-    const Config& cfg = *cfgRef;
-
-    glGenVertexArrays(1, &renderData_->testVAO); // FIXME VAO LEAKED!
-    glBindVertexArray(renderData_->testVAO);
-
-    const auto& vertSrc = cfg.get("shaders.vertSrc").value.string;
-    if(vertSrc.empty())
-    {
-        ARES_log(glog, Fatal, "Failed to load test vertex shader");
-        return false;
-    }
-
-    const auto& fragSrc = cfg.get("shaders.fragSrc").value.string;
-    if(fragSrc.empty())
-    {
-        ARES_log(glog, Fatal, "Failed to load test fragment shader");
-        return false;
-    }
-
-    GLuint testShaders[2];
-    auto vertErr = GL33::compileShader(testShaders[0], GL_VERTEX_SHADER, vertSrc.c_str());
-    if(vertErr)
-    {
-        ARES_log(glog, Fatal,
-                 "Failed to compile test vertex shader: %s",
-                 vertErr);
-        return false;
-    }
-    auto fragErr = GL33::compileShader(testShaders[1], GL_FRAGMENT_SHADER, fragSrc.c_str());
-    if(fragErr)
-    {
-        ARES_log(glog, Fatal,
-                 "Failed to compile test fragment shader: %s",
-                 fragErr);
-        return false;
-    }
-
-    auto linkErr = GL33::linkShaderProgram(renderData_->testProgram,
-                                           testShaders, testShaders + 2);
-    if(linkErr)
-    {
-        ARES_log(glog, Fatal,
-                 "Failed to link test shader program: %s",
-                 linkErr);
-    }
-
-    glDeleteShader(testShaders[0]);
-    glDeleteShader(testShaders[1]);
-
-    // /FIXME
 
     return true;
 }
 
 void GfxModule::halt(Core& core)
 {
-    // FIXME TEST CODE - Remove
-    glDeleteProgram(renderData_->testProgram); renderData_->testProgram = 0;
-    glDeleteVertexArrays(1, &renderData_->testVAO); renderData_->testVAO = 0;
-    // /FIXME
-
-    delete renderData_; renderData_ = nullptr;
+    delete renderData_; renderData_ = nullptr; // (will destroy all OpenGL data)
     window_ = nullptr; // (will be destroyed by `Core`)
 }
 
@@ -166,6 +136,24 @@ void GfxModule::mainUpdate(Core& core)
     // TODO: Move input polling somewhere else so that even if the rendering is
     //       lagging rendering won't suffer
     window_->pollEvents();
+
+    // Resize G-Buffer if required
+    {
+        auto windowResolution = window_->resolution();
+        auto gBufferResolution = renderData_->gBuffer.resolution();
+        if(windowResolution != gBufferResolution)
+        {
+            ARES_log(glog, Trace,
+                     "Resizing G-Buffer: %s -> %s",
+                     gBufferResolution, windowResolution);
+
+            renderData_->gBuffer.resize(windowResolution);
+            if(!renderData_->gBuffer)
+            {
+                ARES_log(glog, Error, "G-Buffer invalid after having been resized!");
+            }
+        }
+    }
 
     // Execute rendering commands calculate for the previous frame
     // NOTE: *THIS IS ALWAYS ONE FRAME BEHIND!*
@@ -182,13 +170,13 @@ void GfxModule::mainUpdate(Core& core)
     auto resolution = window_->resolution();
     glViewport(0, 0, resolution.width, resolution.height);
 
-    glEnable(GL_FRAMEBUFFER_SRGB);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, renderData_->gBuffer.fbo());
+    glDisable(GL_FRAMEBUFFER_SRGB);
     glClearColor(0.2f, 0.4f, 0.6f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    glUseProgram(renderData_->testProgram);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    // /FIXME
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glEnable(GL_FRAMEBUFFER_SRGB);
 
     window_->endFrame();
 

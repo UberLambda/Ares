@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Module/Module.hh"
+#include "../Visual/Resolution.hh"
 
 namespace Ares
 {
@@ -18,6 +19,10 @@ class GfxModule : public Module
     /// Attempts to initialize OpenGL, returns `false` on error.
     /// `window_` should be inited for OpenGL 3.3+.
     bool initGL(Core& core);
+
+    /// Attempts to initialize the G-Buffer given its initial resolution.
+    /// Returns `false` on error.
+    bool initGBuffer(Core& core, Resolution resolution);
 
 public:
     GfxModule();
