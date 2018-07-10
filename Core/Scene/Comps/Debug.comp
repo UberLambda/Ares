@@ -1,4 +1,0 @@
-comp Debug "Entity debugging data."
-{
-    Str16 name "A human-readable name for the entity.";
-}

@@ -1,6 +1,0 @@
-comp Transform "A 3D transform."
-{
-    Vec3 pos "The position of the entity in world space.";
-    Vec3 rot "The Euler rotation of the entity, in radians.";
-    Vec3 scale "The scale of the entity, where <1.0, 1.0, 1.0> is the unit scale.";
-}

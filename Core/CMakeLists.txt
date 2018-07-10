@@ -50,20 +50,6 @@ else()
 endif()
 
 
-# ===== Comp generation ========================================================
-
-find_package(PythonInterp 3.5 REQUIRED)
-add_custom_target(Ares.Core.gencomps
-    COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/Comp/gencomps.py"
-                                 --indir "${CMAKE_CURRENT_SOURCE_DIR}/"
-                                 --outdir "${CMAKE_CURRENT_BINARY_DIR}/Ares/"
-    COMMENT "Running gencomps"
-)
-add_dependencies(Ares.Core Ares.Core.gencomps)
-
-# Note: ${CMAKE_CURRENT_BINARY_DIR} already included by generating BuildConfig.h.in
-
-
 # ===== Libraries to link, build flags =========================================
 
 add_subdirectory(3rdparty/)
