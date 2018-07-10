@@ -4,16 +4,20 @@
 #include <memory>
 #include <typeinfo>
 #include <typeindex>
-#include "Entity.hh"
+#include "EntityId.hh"
 #include "CompStore.hh"
 
 namespace Ares
 {
 
+class EntityRef; // #include "EntityRef.hh"
+
 /// A collection of entities and the components associated to them.
 class Scene
 {
-    size_t nEntities_;
+    friend class EntityRef;
+
+    size_t maxEntities_;
 
     using CompStoreSlot = std::unique_ptr<CompStoreBase>;
     std::unordered_map<std::type_index, CompStoreSlot> compStores_;
@@ -26,36 +30,24 @@ class Scene
     Scene& operator=(const Scene& toCopy) = delete;
 
 public:
+    friend class iterator;
+    class iterator;  // #include "SceneIterator.hh"
+
     /// Initializes an empty scene given the maximum number of entities that it
     /// could hold.
-    Scene(size_t nEntities);
+    Scene(size_t maxEntities);
     ~Scene();
 
     /// Returns the maximum number of entities in the scene.
-    inline size_t nEntities() const
+    inline size_t maxEntities() const
     {
-        return nEntities_;
+        return maxEntities_;
     }
 
 
-    /// Attempts to registers a scene component store for `T` components. Returns
-    /// `false` if a component store for `T` was already registered.
-    template <typename T>
-    bool registerStoreFor()
-    {
-        auto slot = compStores_.find(typeid(T));
-        if(slot != compStores_.end())
-        {
-            // CompStore<T> already registered
-            return false;
-        }
-
-        compStores_[typeid(T)].reset(new CompStore<T>(nEntities_));
-        return true;
-    }
-
-    /// Attempts to retrieve a pointer to the scene component store for `T`
-    /// components; returns null if no such store has been registered in the scene.
+    /// Gets a pointer to the scene's component store for `T`s.
+    /// If no store for `T`s was already allocated, creates a new one before
+    /// returning a pointer to it.
     ///
     /// The pointer should remain valid throughout the lifetime of the scene, even
     /// if other stores are registered in the meantime.
@@ -66,35 +58,33 @@ public:
         auto slot = compStores_.find(typeid(T));
         if(slot == compStores_.end())
         {
-            // CompStore<T> not registered
-            return nullptr;
+            // CompStore<T> not present, create one now
+            auto storeBasePtr = std::unique_ptr<CompStoreBase>(new CompStore<T>(maxEntities_));
+            slot = compStores_.insert(std::make_pair(std::type_index(typeid(T)),
+                                                     std::move(storeBasePtr))).first;
         }
 
         CompStoreBase* ptr = slot->second.get();
         return reinterpret_cast<CompStore<T>*>(ptr);
     }
 
-    template <typename T>
-    const CompStore<T>* storeFor() const
-    {
-        auto slot = compStores_.find(typeid(T));
-        if(slot == compStores_.end())
-        {
-            // CompStore<T> not registered
-            return nullptr;
-        }
 
-        const CompStoreBase* ptr = slot->second.get();
-        return reinterpret_cast<const CompStore<T>*>(ptr);
-    }
+    /// Returns a reference to the entity with the given id in this scene.
+    /// **WARNING**: Referencing an out-of-bounds entity has undefined consequences!
+    EntityRef ref(EntityId entity);
 
+    /// Returns `true` if any component is associated to `entity` in any store.
+    bool has(EntityId entity);
 
     /// Erases all components associated to `entity` across all scene component stores.
-    void erase(Entity entity);
+    void erase(EntityId entity);
 
-    /// Returns `true` if any scene component store has a component for `entity`.
-    bool has(Entity entity) const;
+
+    /// Returns the begin iterator over all entities in the scene.
+    iterator begin();
+
+    /// Returns the end iterator over all entities in the scene.
+    iterator end();
 };
-
 
 }

@@ -116,7 +116,7 @@ bool Core::init()
 
         ARES_log(glog, Debug,
                  "Scene: %lu max entities",
-                 g().scene->nEntities());
+                 g().scene->maxEntities());
     }
 
     // ResourceLoader (and its FileStore)

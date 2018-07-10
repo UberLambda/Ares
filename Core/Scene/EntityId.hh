@@ -6,9 +6,9 @@ namespace Ares
 {
 
 /// An handle that identifies an entity currently in the world.
-using Entity = U32;
+using EntityId = U32;
 
 /// The handle to an invalid (not-existing) entity.
-static constexpr const Entity INVALID_ENTITY = -1;
+static constexpr const EntityId INVALID_ENTITY_ID = -1;
 
 }

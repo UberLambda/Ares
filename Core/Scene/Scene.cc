@@ -1,10 +1,13 @@
 #include "Scene.hh"
 
+#include "EntityRef.hh"
+#include "SceneIterator.hh"
+
 namespace Ares
 {
 
-Scene::Scene(size_t nEntities)
-    : nEntities_(nEntities)
+Scene::Scene(size_t maxEntities)
+    : maxEntities_(maxEntities)
 {
 }
 
@@ -13,7 +16,22 @@ Scene::~Scene()
 }
 
 
-void Scene::erase(Entity entity)
+EntityRef Scene::ref(EntityId entity)
+{
+    return EntityRef(this, entity);
+}
+
+bool Scene::has(EntityId entity)
+{
+    bool present = false;
+    for(auto it = compStores_.begin(); it != compStores_.end(); it ++)
+    {
+        present |= it->second->has(entity);
+    }
+    return present;
+}
+
+void Scene::erase(EntityId entity)
 {
     for(auto it = compStores_.begin(); it != compStores_.end(); it ++)
     {
@@ -21,16 +39,16 @@ void Scene::erase(Entity entity)
     }
 }
 
-bool Scene::has(Entity entity) const
+
+Scene::iterator Scene::begin()
 {
-    for(auto it = compStores_.begin(); it != compStores_.end(); it ++)
-    {
-        if(it->second->has(entity))
-        {
-            return true;
-        }
-    }
-    return false;
+    return iterator(this, 0);
 }
+
+Scene::iterator Scene::end()
+{
+    return iterator(this, maxEntities_); // (one-past-the-end)
+}
+
 
 }

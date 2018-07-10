@@ -1,10 +1,11 @@
 #pragma once
 
 #include <stddef.h>
+#include <vector>
 #include <utility>
 #include <iterator>
 #include "../Base/Utils.hh"
-#include "Entity.hh"
+#include "EntityId.hh"
 
 namespace Ares
 {
@@ -15,15 +16,13 @@ class CompStoreBase
 public:
     virtual ~CompStoreBase() = default;
 
-    /// Attempts to erase the component associated to `entity`. Returns `false`
-    /// on error (`entity` is out of bounds or no component to delete for `entity`).
-    virtual bool erase(Entity entity) = 0;
+    /// Attempts to erase the component associated to `entity`.
+    /// Does nothing if it is not present.
+    virtual void erase(EntityId entity) = 0;
 
-    /// Returns `true` if a component is currently stored for the given entity.
-    virtual bool has(Entity entity) const = 0;
-
-    /// Returns `true` if no component for any entity is currently stored.
-    virtual bool empty() const = 0;
+    /// Returns `true` if a component is currently associated to `entity` in the
+    /// store.
+    virtual bool has(EntityId entity) = 0;
 };
 
 /// A sparse collection of `T` components indexed by `Entity`.
@@ -31,27 +30,24 @@ public:
 template <typename T>
 class CompStore : public CompStoreBase
 {
-    size_t nEntities_;
-    bool* compMap_;
-    T* compData_;
-    Entity firstSetEntity_, lastSetEntity_;
+    size_t maxEntities_;
+    std::vector<bool> compMap_; // (note: specialized in the STL)
+                                // TODO Make `compMap_` use atomic bools?
+    std::vector<T> compData_;
 
     CompStore(const CompStore& toCopy) = delete;
     CompStore& operator=(const CompStore& toCopy) = delete;
 
 public:
-    friend class const_iterator;
-    class const_iterator;
+    friend class iterator;
+    class iterator;
 
     /// Initializes a component store with capacity for a certain number of
-    /// entities. The maximum `Entity` index will hence be `nEntities - 1`.
-    CompStore(size_t nEntities)
-        : nEntities_(nEntities),
-          firstSetEntity_(-1), // Set this initially to -1; see `set()`
-          lastSetEntity_(0) // Set this initially to 0; see `set()`
+    /// entities. The maximum `Entity` index will hence be `maxEntities - 1`.
+    CompStore(size_t maxEntities)
+        : maxEntities_(maxEntities),
+          compMap_(maxEntities), compData_(maxEntities)
     {
-        compMap_ = new bool[nEntities_];
-        compData_ = new T[nEntities_];
     }
 
     CompStore(CompStore&& toMove)
@@ -61,170 +57,112 @@ public:
 
     CompStore& operator=(CompStore&& toMove)
     {
-        // Move data over
-        nEntities_ = toMove.nEntities_;
+        // Move data over and invalidate moved instance
+        maxEntities_ = toMove.maxEntities_;
         compMap_ = std::move(toMove.compMap_);
         compData_ = std::move(toMove.compData_);
-        firstSetEntity_ = toMove.firstSetEntity_;
-        lastSetEntity_ = toMove.lastSetEntity_;
-
-        // Invalidate moved instance
-        toMove.compMap_ = nullptr;
-        toMove.compData_ = nullptr;
 
         return *this;
     }
 
-    ~CompStore() override
-    {
-        delete[] compMap_; compMap_ = nullptr;
-        delete[] compData_; compData_ = nullptr;
-    }
-
-    /// Returns `true` if the component store is valid (not moved, not destroyed)
-    /// or `false` otherwise.
-    inline operator bool() const
-    {
-        return compMap_ && compData_;
-    }
+    ~CompStore() override = default;
 
 
-    /// Attempts to get the component associated to `entity`. Returns `false`
-    /// on error (`entity` is out of bounds or no component to get for `entity`).
-    inline bool get(T& outComp, Entity entity) const
+    /// Returns a pointer to the component stored for `entity` or null if
+    /// there isn't one.
+    /// **WARNING**: Not fully threadsafe! If the component is removed while the
+    ///              `T*` is still in use, the pointer will now point to an unused
+    ///              `T` **or may even point to a different entity's `T` component**!!
+    inline T* get(EntityId entity)
     {
-        if(entity < nEntities_ && compMap_[entity])
+        if(entity < maxEntities_ && compMap_[entity])
+        // TODO Make `compMap_[entity]` be an atomic load?
         {
-            outComp = compData_[entity];
-            return true;
+            return &compData_[entity];
         }
         else
         {
-            // Entity out of bounds or component not present
-            return false;
+            // Entity out of bounds or component not set
+            return nullptr;
         }
     }
 
-    /// Attempts to set the component associated to `entity` to a copy of `comp`.
-    /// Returns `false` on error (`entity` is out of bounds).
-    inline bool set(T comp, Entity entity)
+    /// Sets or replaces the `T` component stored for this entity and returns a
+    /// pointer to the newly-stored component - or null if the component could not be
+    /// set (possibly because `entity` is out of bounds).
+    /// **WARNING**: Not fully threadsafe! If the component is removed while the
+    ///              `T*` is still in use, the pointer will now point to an unused
+    ///              `T` **or may even point to a different entity's `T` component**!!
+    inline T* set(EntityId entity, T&& comp)
     {
-        if(entity >= nEntities_)
+        if(entity >= maxEntities_)
         {
             // Entity out of bounds
-            return false;
+            return nullptr;
         }
 
-        compMap_[entity] = true;
-        compData_[entity] = comp;
-
-        // Maybe this changed the first or last set entity
-        // NOTE: `lastSetEntity_` is initially set to 0 so that `max` will work
-        //       properly the first time (0 < any other entity), while
-        firstSetEntity_ = min(firstSetEntity_, entity);
-        lastSetEntity_ = max(lastSetEntity_, entity);
-
-        return true;
+        compMap_[entity] = true; // TODO Make this be an atomic store?
+        T* compPtr = &compData_[entity];
+        *compPtr = std::move(comp);
+        return compPtr;
     }
 
-    /// Attempts to erase the component associated to `entity`. Returns `true`
-    /// on success or `false` otherwise (`entity` is out of bounds or no component
-    /// to delete for `entity`).
-    bool erase(Entity entity) override
+    /// Returns `true` if a component is currently associated to `entity` in the
+    /// store.
+    /// **WARNING**: Not reliable in multithreaded environments; see `comp()`,
+    ///              `setComp()`'s warnings!
+    inline bool has(EntityId entity) override
     {
-        if(entity < nEntities_ && compMap_[entity])
+        return entity < maxEntities_ && compMap_[entity];
+    }
+
+    /// Attempts to erase the component associated to `entity`.
+    /// Does nothing if there isn't one (component not set or entity id out of bounds).
+    /// **WARNING**: See `comp()`, `setComp()`'s warnings!
+    inline void erase(EntityId entity) override
+    {
+        if(entity < maxEntities_)
         {
+            // Erase component now or keep its "erased" value `false`
             compMap_[entity] = false;
-
-            if(entity == firstSetEntity_)
-            {
-                // Deleted the first set entity; check the first one to be found.
-                // If none is left, reset `firstSetEntity_` to `Entity(-1)` (see `set()`)
-                firstSetEntity_ = Entity(-1);
-                for(Entity i = entity + 1; i < lastSetEntity_; i ++)
-                {
-                    if(compMap_[i])
-                    {
-                        firstSetEntity_ = i;
-                        break;
-                    }
-                }
-            }
-            if(entity == lastSetEntity_)
-            {
-                // Deleted the last set entity; check the last one to be found.
-                // If none is left, reset `lastSetEntity_` to `0` (see `set()`)
-                lastSetEntity_ = 0;
-
-                // Note: iterating from `entity - 1` would cause an underflow
-                //       for `entity == 0`, so we need to start from `entity`.
-                //       `compMap_[entity]` will always be `false` since it has
-                //        just been deleted, so it's just an extra iteration.
-                for(Entity i = entity; i >= firstSetEntity_; i ++)
-                {
-                    if(compMap_[i])
-                    {
-                        lastSetEntity_ = i;
-                        break;
-                    }
-                }
-            }
-
-            return true;
-        }
-        else
-        {
-            // Entity out of bounds or component not present
-            return false;
         }
     }
 
-    /// Returns `true` if a component is currently stored for the given entity.
-    inline bool has(Entity entity) const override
-    {
-        return entity <= lastSetEntity_ && compMap_[entity];
-    }
 
-
-    /// Returns `true` if no component for any entity is currently stored.
-    inline bool empty() const override
-    {
-        // Note: `Entity(-1) > Entity(0)` (`Entity` is an unsigned integer)
-        return firstSetEntity_ > lastSetEntity_;
-    }
-
-
-    class const_iterator
+    class iterator
     {
     public:
         using iterator_category = std::input_iterator_tag;
-        using value_type = std::pair<Entity, const T*>;
+        struct value_type
+        {
+            EntityId entity;
+            T* component;
+        };
         using reference = const value_type&;
         using pointer = const value_type*;
 
     private:
         friend class CompStore;
-        const CompStore* parent_;
-        value_type pair_; // Entity => const T*
+        CompStore* parent_;
+        value_type pair_;
 
 
-        constexpr const_iterator(const CompStore* parent, Entity entity)
+        constexpr iterator(CompStore* parent, EntityId entity)
             : parent_(parent),
               pair_{entity, nullptr}
         {
         }
 
     public:
-        constexpr const_iterator(const const_iterator& toCopy)
+        constexpr iterator(const iterator& toCopy)
         {
             (void)operator=(toCopy);
         }
 
-        inline const_iterator& operator=(const const_iterator& toCopy)
+        inline iterator& operator=(const iterator& toCopy)
         {
             parent_ = toCopy.parent_;
-            pair_.first = toCopy.pair_.first;
-            pair_.second = toCopy.pair_.second;
+            pair_ = {toCopy.pair_.entity, toCopy.pair_.value};
 
             return *this;
         }
@@ -233,38 +171,37 @@ public:
         inline reference operator*()
         {
             // Update the `T*` pointer before returning the pair
-            if(pair_.first != INVALID_ENTITY && parent_->compMap_[pair_.first])
+            if(pair_.entity != INVALID_ENTITY_ID && parent_->compMap_[pair_.entity])
             {
-                pair_.second = &parent_->compData_[pair_.first];
+                pair_.component = &parent_->compData_[pair_.first];
             }
             else
             {
                 // `INVALID_ENTITY` iterator or component has been erased
-                pair_.second = nullptr;
+                pair_.component = nullptr;
             }
 
             return pair_;
         }
 
 
-        inline bool operator==(const const_iterator& other) const
+        inline bool operator==(const iterator& other) const
         {
-            return pair_.first == other.pair_.first && parent_ == other.parent_;
-            // (Note: if `pair_.first` matches, then `pair_.second` should also)
+            return pair_.entity == other.pair_.entity && parent_ == other.parent_;
+            // (Note: if `pair_.entity` matches, then `pair_.component` should also)
         }
 
-        inline bool operator!=(const const_iterator& other) const
+        inline bool operator!=(const iterator& other) const
         {
-            return pair_.first != other.pair_.first || parent_ != other.parent_;
-            // (Note: if `pair_.first` does not match, then `pair_.second` also should not)
+            return !operator==(other);
         }
 
 
-        const_iterator& operator++() // preincrement
+        iterator& operator++() // preincrement
         {
             // Search for the next entity, if any
-            Entity nextEntity = parent_->lastSetEntity_ + 1;
-            for(Entity i = pair_.first + 1; i <= parent_->lastSetEntity_; i ++)
+            EntityId nextEntity = INVALID_ENTITY_ID;
+            for(EntityId i = pair_.entity; i < parent_->maxEntities_; i ++)
             {
                 if(parent_->compMap_[i])
                 {
@@ -274,39 +211,28 @@ public:
                 }
             }
 
-            // (`second` will be updated each time `operator*()` is called)
-            pair_.first = nextEntity;
-            pair_.second = nullptr;
+            // (`pair_.component` will be updated each time `operator*()` is called)
+            pair_.entity = nextEntity;
 
             return *this;
         }
 
-        inline const_iterator operator++(int) // postincrement
+        inline iterator operator++(int) // postincrement
         {
-            const_iterator old = *this;
+            iterator old = *this;
             (void)operator++();
             return old;
         }
     };
 
-    inline const_iterator begin() const
+    inline iterator begin()
     {
-        return const_iterator(this, empty() ? INVALID_ENTITY : firstSetEntity_);
+        return iterator(this, 0);
     }
 
-    inline const_iterator cbegin() const
+    inline iterator end()
     {
-        return begin();
-    }
-
-    inline const_iterator end() const
-    {
-        return const_iterator(this, empty() ? INVALID_ENTITY : lastSetEntity_ + 1);
-    }
-
-    inline const_iterator cend() const
-    {
-        return end();
+        return iterator(this, maxEntities_);
     }
 };
 
