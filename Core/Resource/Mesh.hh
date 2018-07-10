@@ -1,7 +1,9 @@
 #pragma once
 
+#include <vector>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 namespace Ares
 {
@@ -26,7 +28,7 @@ public:
 
 private:
     std::vector<Vertex> vertices_;
-    std::vector<Index> vertices_;
+    std::vector<Index> indices_;
 
 public:
     /// Gets/modifies the vertices currently in the mesh.
@@ -61,11 +63,11 @@ public:
     /// `Vertex` structures are implicitly convertible to arrays of floats.
     inline const float* vertexData() const
     {
-        return reinterpret_cast<float*>(&indices_[0]);
+        return reinterpret_cast<const float*>(&vertices_[0]);
     }
 
     /// Returns the vertex index data as an array of indices.
-    inline const Index* vertexData() const
+    inline const Index* indexData() const
     {
         return &indices_[0];
     }

@@ -21,7 +21,8 @@ add_executable(Ares.Core ${ARES_WIN32}
     Debug/Log.cc Debug/DebugModule.cc
     Mem/Mem.cc Mem/MallocOverrides.cc Mem/NewOverrides.cc
     Scene/Scene.cc
-    Gfx/GfxModule.cc Gfx/GL33/Shader.cc Gfx/GL33/GBuffer.cc
+    Gfx/GfxModule.cc
+    Gfx/GL33/Shader.cc Gfx/GL33/GBuffer.cc Gfx/GL33/MeshBuf.cc
 )
 set_target_properties(Ares.Core PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/build/"
