@@ -19,7 +19,7 @@ using Gltf = tinygltf::Model;
 template <>
 struct ResourceParser<Gltf>
 {
-    static ErrString parse(Gltf& outGltf, std::istream& stream, const char* ext,
+    static ErrString parse(Gltf& outGltf, std::istream& stream, const Path& path,
                            ResourceLoader& loader);
 };
 

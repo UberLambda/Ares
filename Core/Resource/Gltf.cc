@@ -104,9 +104,10 @@ static bool fsWriteWholeFile(std::string* err, const std::string& filepath,
 
 
 ErrString ResourceParser<Gltf>::parse(Gltf& outGltf,
-                                      std::istream& stream, const char* ext,
+                                      std::istream& stream, const Path& path,
                                       ResourceLoader& loader)
 {
+    const char* ext = path.extension();
     bool isBinaryGltf;
     if(strcmp(ext, ".glb") == 0)
     {

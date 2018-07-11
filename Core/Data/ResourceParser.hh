@@ -2,6 +2,7 @@
 
 #include <istream>
 #include "../Base/ErrString.hh"
+#include "Path.hh"
 
 namespace Ares
 {
@@ -14,13 +15,12 @@ template <typename T>
 struct ResourceParser
 {
     /// Attempts to parse `outResource` from the given stream; returns a non-empty
-    /// error string on error. `ext` contains the file extension (lowercase and
-    /// including the initial dot) that the data in the stream would have if it
-    /// was in a file.
+    /// error string on error. `path` contains the path to the resource file being
+    /// parsed from `stream`.
     /// If required, resources can ask their parent `resourceLoader` to parse
     /// other resources that this one depends on. For example, think of a material
     /// resource requiring to load some textures.
-    static ErrString parse(T& outResource, std::istream& stream, const char* ext,
+    static ErrString parse(T& outResource, std::istream& stream, const Path& path,
                            ResourceLoader& loader);
 };
 

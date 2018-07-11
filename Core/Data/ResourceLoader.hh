@@ -125,13 +125,11 @@ public:
             return errStr.str();
         }
 
-        const char* fileExt = resPath.extension();
-
         // Allocate a refcounted `T` and try to parse it from file
         // TODO Allocate resource in a contiguous memory region, not scattering
         //      them on the heap!
         auto resource = makeRef<T>();
-        ErrString parsingErr = ResourceParser<T>::parse(*resource, *stream, fileExt,
+        ErrString parsingErr = ResourceParser<T>::parse(*resource, *stream, resPath,
                                                         *this);
 
         fileStore_->freeStream(stream); // (assumed to be threadsafe)
