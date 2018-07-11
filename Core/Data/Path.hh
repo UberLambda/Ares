@@ -101,6 +101,16 @@ public:
     }
 
 
+    inline std::string& str()
+    {
+        return path_;
+    }
+
+    inline const std::string& str() const
+    {
+        return path_;
+    }
+
     inline operator std::string&()
     {
         return path_;

@@ -35,7 +35,7 @@ struct ConfigValue
     } value; ///< The value itself. **WARNING** Only one field is valid, depending on `type`!
 
 
-    bool operator==(const ConfigValue&& other) const
+    bool operator==(const ConfigValue& other) const
     {
         if(type != other.type)
         {
@@ -56,6 +56,11 @@ struct ConfigValue
         default: // Boolean
             return value.boolean == other.value.boolean;
         }
+    }
+
+    inline bool operator!=(const ConfigValue& other) const
+    {
+        return !operator==(other);
     }
 };
 
