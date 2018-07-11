@@ -1,22 +1,16 @@
 # Ares shader (.arsh) file 
-Describes a shader program. Uses `Config` syntax.
+Describes a shader program.  
 
-## [shader] section
-**Required?** **Yes**
+.arsh files use JSON syntax, while the shader sources themselves are GLSL 330 core.  
 
-Shader source code uses GLSL 330 core syntax.  
+The root of the JSON should be an object containing atleast one of these keys:
 
-Inside of this section, source code for atleast one of any of these
-shader types must be defined:
+- `"vert"`: Vertex shader.
+- `"frag"`: Fragment shader.
+- `"geom"`: Geometry shader.
+- `"tes"`: Tessellation evaluation shader.
+- `"tec"`: Tessellation control shader.
 
-- vert: Vertex shader.
-- frag: Fragment shader.
-- geom: Geometry shader.
-- tes: Tessellation evaluation shader.
-- tec: Tessellation control shader.
-
-If the source code for a shader is stored directly in a string value
-it should be stored in a key named `${type}.src`.  
-If the source code for a shader is stored in another resource file
-the path to that file should be stored in a key named `${type}`.
-The path can either be relative to the .arsh file or absolute.
+Each defined key must point to a string value. Each value contains a path to
+a resource file containing source code for the respective shader.  
+The paths can either be relative to the .arsh file or absolute.

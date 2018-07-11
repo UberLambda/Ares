@@ -105,7 +105,3 @@ target_link_libraries(plthook PUBLIC ${PLTHOOK_DEPS})
 # == License: MIT
 add_library(tinygltf STATIC tinygltf.cc)
 target_include_directories(tinygltf PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/tinygltf/")
-target_compile_definitions(tinygltf INTERFACE
-    TINYGLTF_NOEXCEPTION
-    JSON_NOEXCEPTION
-)

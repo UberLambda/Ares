@@ -147,9 +147,7 @@ public:
         }
         else
         {
-            std::ostringstream errStr;
-            errStr << "Resource stream could not be parsed to a resource: " << parsingErr;
-            return errStr.str();
+            return parsingErr;
             // (`~Ref()` will automatically deallocate the resource)
         }
     }
