@@ -23,6 +23,11 @@ public:
     {
     }
 
+    Path(std::string&& pathStr)
+        : path_(std::move(pathStr))
+    {
+    }
+
     Path(const char* pathStr)
         : path_(pathStr)
     {
@@ -48,6 +53,51 @@ public:
             }
         }
         return ext;
+    }
+
+    /// Returns the dirname (i.e. the parent directory) of the given path, or an
+    /// empty string on error (path contains no parent dir).
+    ///
+    /// Examples:
+    /// `dirname("/") = "/"`
+    /// `dirname("/x") = "/"`
+    /// `dirname("/x/y") = "/x"`
+    /// `dirname("/x/y/") = "/x"`
+    /// `dirname("/x//y///") = "/x"`
+    /// `dirname("x") = ""`
+    /// `dirname("x/y") = "x"`
+    /// `dirname("x/y/") = "x"`
+    /// `dirname("x//y///") = "x"`
+    const Path dirname() const
+    {
+        const char* firstCh = &path_[0];
+        const char* lastCh = &path_[path_.length() - 1];
+        bool foundNonSlash = false;
+        for(; lastCh > firstCh; lastCh --)
+        {
+            if(*lastCh == '/')
+            {
+                if(foundNonSlash && *(lastCh - 1) != '/')
+                {
+                    // Found the first of the upper directory's separator
+                    break;
+                }
+                // Else: skip trailing separator
+            }
+            else
+            {
+                foundNonSlash = true;
+            }
+        }
+
+        size_t length = lastCh - firstCh;
+        if(firstCh == lastCh && *firstCh == '/')
+        {
+            // Path relative to root, include the root slash
+            length ++;
+        }
+
+        return Path(path_.substr(0, length));
     }
 
 
