@@ -26,6 +26,55 @@ MeshBuf::operator bool() const
 }
 
 
+void MeshBuf::setupVao()
+{
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuf_);
+
+    // vec3 position
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0,
+                          3, GL_FLOAT,
+                          GL_FALSE,
+                          sizeof(Mesh::Vertex),
+                          (void*)offsetof(Mesh::Vertex, position));
+    // vec3 normal
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1,
+                          3, GL_FLOAT,
+                          GL_FALSE, // (TODO: normalize=on?)
+                          sizeof(Mesh::Vertex),
+                          (void*)offsetof(Mesh::Vertex, normal));
+    // vec4 tangent
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2,
+                          4, GL_FLOAT,
+                          GL_FALSE,
+                          sizeof(Mesh::Vertex),
+                          (void*)offsetof(Mesh::Vertex, tangent));
+    // vec2 texCoord0
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3,
+                          2, GL_FLOAT,
+                          GL_FALSE,
+                          sizeof(Mesh::Vertex),
+                          (void*)offsetof(Mesh::Vertex, texCoord0));
+    // vec2 texCoord1
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4,
+                          2, GL_FLOAT,
+                          GL_FALSE,
+                          sizeof(Mesh::Vertex),
+                          (void*)offsetof(Mesh::Vertex, texCoord1));
+    // vec4 color0
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5,
+                          4, GL_FLOAT,
+                          GL_FALSE,
+                          sizeof(Mesh::Vertex),
+                          (void*)offsetof(Mesh::Vertex, color0));
+}
+
+
 /// Invokes `glBufferData` or `glBufferSubData` appropriately depending on
 /// `oldSize <=> newSize`. `oldSize` can be zero.
 static void updateGlBuffer(GLenum target, GLsizei oldSize, GLsizei newSize,

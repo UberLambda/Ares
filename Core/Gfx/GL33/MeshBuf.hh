@@ -27,6 +27,12 @@ public:
     operator bool() const;
 
 
+    /// Performs the required `glEnableVertexAttribArray()` and
+    /// `glVertexAttribPointer()` for the mesh to setup `Mesh::Vertex` on
+    /// the currently-bound VAO.
+    /// **OpenGL**: rebinds `GL_ARRAY_BUFFER`
+    void setupVao();
+
     /// Uploads the given mesh to `vetexBuffer` and `indexBuffer`. Returns `false`
     /// on failure (usually because the internal buffers were not created
     /// successfully at startup time).
