@@ -1,9 +1,11 @@
 #pragma once
 
 #include <stddef.h>
+#include "../Base/Ref.hh"
 #include "../Base/ErrString.hh"
 #include "../Visual/ViewRect.hh"
 #include "GfxResources.hh"
+#include "GfxPipeline.hh"
 #include "GfxCmd.hh"
 
 namespace Ares
@@ -14,8 +16,13 @@ class GfxBackend
 public:
     GfxBackend() = default;
 
+    // Can be called again to reinit the backend with a different pipeline.
+    // **Backends will be inited AFTER some `gen*()` calls on it are made, since
+    //   the pipeline requires the generation of some textures and stuff!!**
+    // **Hence the backend should be able to generate and delete resources AS SOON
+    //   AS ITS CONSTRUCTOR IS RUN!**
     // Called by `GfxRenderer()`, do not call manually beforehand
-    virtual ErrString init() = 0;
+    virtual ErrString init(Ref<GfxPipeline> pipeline) = 0;
 
     /// Must destroy all leftover resources.
     virtual ~GfxBackend() = default;

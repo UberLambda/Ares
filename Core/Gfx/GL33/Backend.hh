@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <flextGL.h>
 #include "../GfxBackend.hh"
+#include "../Base/KeyString.hh"
 
 namespace Ares
 {
@@ -22,9 +23,88 @@ private:
     std::unordered_map<Handle<GfxTexture>, TextureDesc> textures_;
     std::unordered_set<Handle<GfxShader>> shaders_;
 
+    Ref<GfxPipeline> pipeline_;
+    U8 curPassId_ = 0;
+    struct PassData
+    {
+        GLuint fbo;
+        GLuint program;
+        unsigned int nTextures;
+    };
+    std::vector<PassData> passData_;
+
+
+    struct VaoKey
+    {
+        U8 passId;
+        GLuint vertexBuffer;
+        GLuint indexBuffer;
+        GLuint instanceBuffer;
+
+        inline bool operator==(const VaoKey& other) const
+        {
+            return passId == other.passId
+                   && vertexBuffer == other.vertexBuffer
+                   && indexBuffer == other.indexBuffer
+                   && instanceBuffer == other.instanceBuffer;
+        }
+        inline bool operator!=(const VaoKey& other) const
+        {
+            return !operator==(other);
+        }
+    };
+
+    struct Vao
+    {
+        VaoKey key;
+
+    private:
+        GLuint vao_;
+
+    public:
+        Vao(const GfxPipeline::Pass& pass, VaoKey key);
+        ~Vao();
+
+        inline operator GLuint() const
+        {
+            return vao_;
+        }
+    };
+    class VaoKeyHasher
+    {
+    public:
+        inline size_t operator()(const VaoKey& value) const
+        {
+            // Poor man's solution for hashing 3 U32 keys and 1 U8 key together
+            static constexpr const size_t KEY_SIZE = sizeof(GLuint) * 3 + sizeof(U8) + 1;
+
+            char keyBytes[KEY_SIZE];
+            GLuint* keyGLuints = (U32*)keyBytes;
+            keyGLuints[0] = value.vertexBuffer;
+            keyGLuints[1] = value.indexBuffer;
+            keyGLuints[2] = value.instanceBuffer;
+            keyBytes[KEY_SIZE - 2] = value.passId;
+            keyBytes[KEY_SIZE - 1] = '\0';
+
+            KeyString<KEY_SIZE> key(keyBytes);
+            return key.hash();
+        }
+    };
+
+    using VaoMap = std::unordered_map<VaoKey, Vao, VaoKeyHasher>;
+    VaoMap vaos_;
+
+    struct Binding
+    {
+        Vao* vao = nullptr;
+
+    } curBindings_;
+
+    void switchToPass(U8 nextPassId);
+
 public:
     Backend();
-    ErrString init() override;
+    ErrString init(Ref<GfxPipeline> pipeline) override;
     ~Backend() override;
 
     Handle<GfxBuffer> genBuffer(const GfxBufferDesc& desc, ErrString* err) override;

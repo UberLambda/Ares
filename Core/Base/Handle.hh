@@ -14,11 +14,11 @@ struct Handle
     U32 id;
 
 
-    Handle()
+    constexpr Handle()
         : id(0)
     {
     }
-    explicit Handle(U32 id)
+    explicit constexpr Handle(U32 id)
         : id(id)
     {
     }

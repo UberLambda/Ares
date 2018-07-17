@@ -10,6 +10,7 @@
 #include "../Visual/Resolution.hh"
 #include "GfxResources.hh"
 #include "GfxCmd.hh"
+#include "GfxPipeline.hh"
 #include "GfxBackend.hh"
 
 namespace Ares
@@ -19,6 +20,7 @@ class GfxRenderer
 {
 private:
     Ref<GfxBackend> backend_;
+    Ref<GfxPipeline> pipeline_;
 
     moodycamel::ConcurrentQueue<GfxCmd> cmdQueue_;
     moodycamel::ConsumerToken cmdQueueTok_; // A queue consumer token to be
@@ -34,10 +36,16 @@ private:
     void orderFrameCmds(size_t n);
 
 public:
-    GfxRenderer();
+    GfxRenderer(Ref<GfxBackend> backend);
     ~GfxRenderer();
-    ErrString init(Ref<GfxBackend> backend);
 
+    /// [Re]initializes the backend with the given pipeline.
+    ErrString init(Ref<GfxPipeline> pipeline);
+
+    inline Ref<GfxPipeline> pipeline() const
+    {
+        return pipeline_;
+    }
 
     inline GfxBackend* operator->()
     {

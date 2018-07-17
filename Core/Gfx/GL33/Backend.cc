@@ -13,9 +13,9 @@ Backend::Backend()
 {
 }
 
-ErrString Backend::init()
+ErrString Backend::init(Ref<GfxPipeline> pipeline)
 {
-    // Nothing to init here
+    pipeline_ = pipeline;
     return {};
 }
 
@@ -294,12 +294,117 @@ void Backend::changeResolution(Resolution resolution)
     glViewport(0, 0, resolution.width, resolution.height);
 }
 
+
+void Backend::switchToPass(U8 nextPassId)
+{
+    const GfxPipeline::Pass& pass = pipeline_->passes[nextPassId];
+    const PassData& curPassData = passData_[curPassId_];
+    const PassData& nextPassData = passData_[nextPassId];
+
+    if(curPassData.fbo != nextPassData.fbo)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, nextPassData.fbo);
+    }
+
+    if(curPassData.program != nextPassData.program)
+    {
+        glUseProgram(curPassData.program);
+    }
+
+    curPassId_ = nextPassId;
+}
+
+static constexpr const GLenum GFX_VERTEXATTRIB_TYPE_TO_GL[] = // Index by `GfxPipeline::VertexAttrib::Type`
+{
+    GL_FLOAT, // 0: F32
+    GL_INT, // 1: I32
+    GL_UNSIGNED_INT, // 2: U32
+};
+static constexpr const size_t GFX_VERTEXATTRIB_TYPE_SIZE[] = // Index by `GfxPipeline::VertexAttrib::Type`
+{
+    4, // 0: F32
+    4, // 1: I32
+    4, // 2: U32
+};
+
+Backend::Vao::Vao(const GfxPipeline::Pass& pass, VaoKey key)
+    : key(key), vao_(0)
+{
+    glGenVertexArrays(1, &vao_);
+    if(!vao_)
+    {
+        return;
+    }
+
+    glBindVertexArray(vao_);
+
+    GLuint boundBuffer = 0;
+    size_t vertexOffset = 0, instanceOffset = 0;
+    size_t* boundOffset = nullptr;
+    for(unsigned int i = 0; i < pass.nVertexAttribs; i ++)
+    {
+        const auto& attrib = pass.vertexAttribs[i];
+
+        glEnableVertexAttribArray(i);
+
+        if(attrib.instanceDivisor == 0 && boundBuffer != key.vertexBuffer)
+        {
+            glBindBuffer(GL_ARRAY_BUFFER, key.vertexBuffer);
+            boundBuffer = key.vertexBuffer;
+            boundOffset = &vertexOffset;
+        }
+        else if(attrib.instanceDivisor != 0 && boundBuffer != key.instanceBuffer)
+        {
+            glVertexAttribDivisor(i, attrib.instanceDivisor);
+            glBindBuffer(GL_ARRAY_BUFFER, key.instanceBuffer);
+            boundBuffer = key.instanceBuffer;
+            boundOffset = &instanceOffset;
+        }
+
+        glVertexAttribPointer(i,
+                              attrib.n, GFX_VERTEXATTRIB_TYPE_TO_GL[unsigned(attrib.type)],
+                              GL_FALSE,
+                              0, (void*)*boundOffset);
+
+        *boundOffset += GFX_VERTEXATTRIB_TYPE_SIZE[unsigned(attrib.type)] * attrib.n;
+    }
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, key.indexBuffer);
+}
+
+Backend::Vao::~Vao()
+{
+    glDeleteVertexArrays(1, &vao_); vao_ = 0;
+}
+
+
 void Backend::runCmds(const GfxCmd* cmds, const GfxCmdIndex* cmdsOrder, size_t n)
 {
     for(size_t i = 0; i < n; i ++)
     {
         const GfxCmd& cmd = cmds[cmdsOrder[i].index];
-        // FIXME IMPLEMENT!
+
+        if(cmd.passId != curPassId_)
+        {
+            // Switch to the next pass in the pipeline
+            switchToPass(cmd.passId);
+        }
+
+        Vao*& curVao = curBindings_.vao;
+        VaoKey cmdVaoKey = {cmd.passId, cmd.vertexBuffer, cmd.indexBuffer, cmd.instanceBuffer};
+        if(!curVao || curVao->key != cmdVaoKey)
+        {
+            // [Create] + switch to the required VAO
+            auto vaoIt = vaos_.find(cmdVaoKey);
+            if(vaoIt == vaos_.end())
+            {
+                const GfxPipeline::Pass& pass = pipeline_->passes[curPassId_];
+                vaoIt = vaos_.insert(std::make_pair(cmdVaoKey, Vao(pass, cmdVaoKey))).first;
+            }
+
+            glBindVertexArray(*curVao);
+            curVao = &vaoIt->second;
+        }
     }
 }
 

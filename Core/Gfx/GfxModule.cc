@@ -56,18 +56,34 @@ bool GfxModule::initGL(Core& core)
     return true;
 }
 
-bool GfxModule::initRenderer(Core& core, Resolution resolution)
+bool GfxModule::createRenderer(Core& core)
 {
-    ARES_log(glog, Trace, "Setting up renderer (OpenGL 3.3 core)");
+    ARES_log(glog, Trace, "Creating renderer (OpenGL 3.3 core)");
 
     backend_ = intoRef<GfxBackend>(new GL33::Backend());
-    renderer_ = new GfxRenderer();
+    renderer_ = new GfxRenderer(backend_);
 
-    // Initializes both the renderer and the backend
-    ErrString err = renderer_->init(backend_);
+    return true;
+}
+
+bool GfxModule::createPipeline(Core& core, Resolution resolution)
+{
+    ARES_log(glog, Trace,
+             "Creating GfxPipeline (initial resolution: %s)",
+             resolution);
+
+    pipeline_ = makeRef<GfxPipeline>();
+
+    return true;
+}
+
+bool GfxModule::initPipelineAndRenderer(Core& core)
+{
+    // Initializes both the renderer and the backend for this pipeline
+    ErrString err = renderer_->init(pipeline_);
     if(!err)
     {
-        ARES_log(glog, Trace, "Renderer OK");
+        ARES_log(glog, Trace, "Renderer inited");
         return true;
     }
     else
@@ -90,17 +106,14 @@ bool GfxModule::init(Core& core)
         return false;
     }
 
-    if(!initGL(core))
-    {
-        return false;
-    }
+    Resolution initialResolution = window_->resolution();
 
-    if(!initRenderer(core, window_->resolution()))
-    {
-        return false;
-    }
+    bool allOk = initGL(core)
+                 && createRenderer(core)
+                 && createPipeline(core, initialResolution)
+                 && initPipelineAndRenderer(core);
 
-    return true;
+    return allOk;
 }
 
 void GfxModule::halt(Core& core)

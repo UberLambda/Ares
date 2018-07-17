@@ -3,8 +3,8 @@
 namespace Ares
 {
 
-GfxRenderer::GfxRenderer()
-    : cmdQueueTok_(cmdQueue_),
+GfxRenderer::GfxRenderer(Ref<GfxBackend> backend)
+    : backend_(backend), cmdQueueTok_(cmdQueue_),
       frameResolution_{0, 0} // (set to 0x0 to make sure that `changeVideoMode` is run at startup)
 {
 }
@@ -15,18 +15,16 @@ GfxRenderer::~GfxRenderer()
     // backend dies, will Destroy all leftover resources
 }
 
-ErrString GfxRenderer::init(Ref<GfxBackend> backend)
+ErrString GfxRenderer::init(Ref<GfxPipeline> pipeline)
 {
-    if(backend)
+    if(!backend_)
     {
-        backend_ = backend;
-        auto err = backend_->init();
-        return err;
+        return "GfxBackend is null";
     }
-    else
-    {
-        return "Can't init null GfxBackend!";
-    }
+
+    auto err = backend_->init(pipeline);
+    pipeline_ = pipeline;
+    return err;
 }
 
 
@@ -63,36 +61,43 @@ void GfxRenderer::orderFrameCmds(size_t n)
     // TODO PERFORMANCE IMPORTANT Rebuild the material tree only once per material
     //      addition/deletion, not for every command for every frame!!
     //      This could be done by storing a `Handle<GfxMaterial>` instead of
-    //      `program`+`textures` in `GfxCmd`
+    //      `textures` in `GfxCmd`
 
     // TODO PERFORMANCE Multithreaded (Task-based) index generation + sorting?
 
     // Rebuild the material tree for this frame.
-    // Priority used for minimizing rebinds:
-    // - Shader program
-    // - Textures [0..n]
-    // - vertex & indexBuffer - FIXME: Should not be in the *material* tree!
+    // Draw calls are grouped together by the textures they use.
     // After the tree is built, iterating into the tree will automatically give
     // the optimal binding order and, by accessing `iterator.index()`, also a
-    // sorting key for materials
+    // sorting key for materials.
+
+    // There are **no** attempts to minimize vertex/index buffer rebinds!! This
+    // is because if the vertex/index buffers are the same you should not use 2+
+    // different `Draw[Indexed]` calls, but a single `Draw[Indexed]Instanced` call
+    // instead!
+    // TODO Could try to merge ("batch") `Draw[Indexed]` commands with the same
+    //      buffers to `Draw[Indexed]Instanced` calls here!
+
     frameMaterials_.clear();
     for(size_t i = 0; i < n; i ++)
     {
         const GfxCmd& cmd = frameCmds_[i];
 
-        auto it = frameMaterials_.at(cmd.shader);
-        for(unsigned int i = 0; i < GfxCmd::MAX_TEXTURES; i ++)
+        // TODO Extract this to its own function (see below)
+        auto it = frameMaterials_.begin();
+        for(unsigned int i = 0;
+            i < GfxCmd::MAX_TEXTURES && cmd.textures[i] != 0;
+            i ++)
         {
             it = it.at(cmd.textures[i]);
         }
-        it = it.at(cmd.vertexBuffer, cmd.indexBuffer); // FIXME See above
     }
 
     // Build the sorting indices
     // Priority used for sorting:
-    // - Rendering pass (hi to lo)
+    // - Rendering pass (lo to hi)
     // - Material index
-    static_assert(sizeof(GfxCmd::pass) == 1,
+    static_assert(sizeof(GfxCmd::passId) == 1,
                   "Sort key generation code expects GfxCmd::pass to be an U8");
 
     for(size_t i = 0; i < n; i ++)
@@ -100,19 +105,22 @@ void GfxRenderer::orderFrameCmds(size_t n)
         const GfxCmd& cmd = frameCmds_[i];
         GfxCmdIndex& cmdIndex = frameCmdsOrder_[i];
 
-        auto matIt = frameMaterials_.at(cmd.shader);
-        for(unsigned int i = 0; i < GfxCmd::MAX_TEXTURES; i ++)
+        // TODO Extract this to its own function (see above)
+        auto matIt = frameMaterials_.begin();
+        for(unsigned int i = 0;
+            i < GfxCmd::MAX_TEXTURES && cmd.textures[i] != 0;
+            i ++)
         {
             matIt = matIt.at(cmd.textures[i]);
         }
-        matIt = matIt.at(cmd.vertexBuffer, cmd.indexBuffer); // FIXME See above
         U32 matIndex = U32(matIt.index());
 
+        // Key layout: see docs
         cmdIndex.index = i;
-        cmdIndex.key = U64(cmd.pass) << 56 | U64(matIndex);
+        cmdIndex.key = U64(cmd.passId) << 56 | U64(matIndex);
     }
 
-    // Order the command indices
+    // Order the command indices by key
     std::sort(frameCmdsOrder_.begin(), frameCmdsOrder_.begin() + n);
 }
 
