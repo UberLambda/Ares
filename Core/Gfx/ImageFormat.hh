@@ -15,7 +15,6 @@ struct ImageFormat
     {
         None = 0, ///< Channel disabled.
 
-        I2, ///< 2-bit signed integer.
         I8, ///< 8-bit signed integer.
         I10, ///< 10-bit signed integer.
         I16, ///< 16-bit signed integer.
@@ -27,7 +26,9 @@ struct ImageFormat
         U16, ///< 16-bit unsigned integer.
         U32, ///< 32-bit unsigned integer.
 
+        UN2, ///< 2-bit unsigned integer, normalized to 0..1 float
         UN8, ///< 8-bit unsigned integer, normalized to 0..1 float
+        UN10, ///< 10-bit unsigned integer. normalized to 0..1 float
         UN16, ///< 16-bit unsigned integer, normalized to 0..1 float
 
         F16, ///< 16-bit floating point number.
