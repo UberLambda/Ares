@@ -55,6 +55,9 @@ public:
     virtual void delShader(Handle<GfxShader> shader) = 0;
 
 
+    /// Run when the rendering resolution is changed.
+    virtual void changeResolution(Resolution resolution) = 0;
+
     /// Runs `cmds[cmdsOrder[i].index]`` for each `i` in `[0..n)`.
     virtual void runCmds(const GfxCmd* cmds, const GfxCmdIndex* cmdsOrder, size_t n) = 0;
 };

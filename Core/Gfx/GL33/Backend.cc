@@ -289,6 +289,11 @@ void Backend::delShader(Handle<GfxShader> shader)
 }
 
 
+void Backend::changeResolution(Resolution resolution)
+{
+    glViewport(0, 0, resolution.width, resolution.height);
+}
+
 void Backend::runCmds(const GfxCmd* cmds, const GfxCmdIndex* cmdsOrder, size_t n)
 {
     for(size_t i = 0; i < n; i ++)

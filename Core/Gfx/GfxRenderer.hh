@@ -7,6 +7,7 @@
 #include "../Base/MapTree.hh"
 #include "../Base/Handle.hh"
 #include "../Base/Ref.hh"
+#include "../Visual/Resolution.hh"
 #include "GfxResources.hh"
 #include "GfxCmd.hh"
 #include "GfxBackend.hh"
@@ -23,6 +24,7 @@ private:
     moodycamel::ConsumerToken cmdQueueTok_; // A queue consumer token to be
                                             // used by `renderFrame()` only
 
+    Resolution frameResolution_;
     MapTree<U32, size_t> frameMaterials_;
     std::vector<GfxCmd> frameCmds_;
     std::vector<GfxCmdIndex> frameCmdsOrder_;
@@ -42,7 +44,7 @@ public:
         return backend_.get();
     }
 
-    void renderFrame();
+    void renderFrame(Resolution resolution);
 };
 
 }

@@ -4,7 +4,8 @@ namespace Ares
 {
 
 GfxRenderer::GfxRenderer()
-    : cmdQueueTok_(cmdQueue_)
+    : cmdQueueTok_(cmdQueue_),
+      frameResolution_{0, 0} // (set to 0x0 to make sure that `changeVideoMode` is run at startup)
 {
 }
 
@@ -29,8 +30,15 @@ ErrString GfxRenderer::init(Ref<GfxBackend> backend)
 }
 
 
-void GfxRenderer::renderFrame()
+void GfxRenderer::renderFrame(Resolution resolution)
 {
+    // Check if resolution changed; if so, run backend callback
+    if(frameResolution_ != resolution)
+    {
+        backend_->changeResolution(resolution);
+        frameResolution_ = resolution;
+    }
+
     // Copy all commands that we can find from the global command queue to this
     // frame's command queue
     size_t nCmds = cmdQueue_.size_approx();

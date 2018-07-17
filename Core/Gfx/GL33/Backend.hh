@@ -40,7 +40,7 @@ public:
     Handle<GfxShader> genShader(const GfxShaderDesc& desc, ErrString* err) override;
     void delShader(Handle<GfxShader> shader) override;
 
-
+    void changeResolution(Resolution resolution) override;
     void runCmds(const GfxCmd* cmds, const GfxCmdIndex* cmdsOrder, size_t n) override;
 };
 

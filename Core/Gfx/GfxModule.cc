@@ -135,13 +135,8 @@ void GfxModule::mainUpdate(Core& core)
     //       introducing a one-frame rendering lag
     window_->beginFrame();
 
-
-    // FIXME IMPLEMENT: Run rendering commands for the previous frame here
-
-    // FIXME TEST CODE - Remove
     auto resolution = window_->resolution();
-    //renderData_->renderer.renderFrame(core.g().scene);
-    glViewport(0, 0, resolution.width, resolution.height);
+    renderer_->renderFrame(resolution);
 
     window_->endFrame();
 
