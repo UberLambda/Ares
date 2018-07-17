@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include "../Base/NumTypes.hh"
 
 namespace Ares
@@ -11,6 +12,16 @@ template <typename T>
 struct Handle
 {
     U32 id;
+
+
+    Handle()
+        : id(0)
+    {
+    }
+    explicit Handle(U32 id)
+        : id(id)
+    {
+    }
 
     inline operator U32() const
     {
@@ -24,6 +35,21 @@ struct Handle
     inline bool operator!=(const Handle& other) const
     {
         return id != other.id;
+    }
+};
+
+}
+
+namespace std
+{
+
+template <typename T>
+class hash<Ares::Handle<T>>
+{
+public:
+    inline size_t operator()(const Ares::Handle<T>& value) const
+    {
+        return size_t(value.id);
     }
 };
 
