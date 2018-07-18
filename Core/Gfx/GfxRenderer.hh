@@ -47,7 +47,11 @@ public:
         return pipeline_;
     }
 
-    inline GfxBackend* operator->()
+    inline GfxBackend& backend()
+    {
+        return *backend_;
+    }
+    inline GfxBackend* operator->() // Alias of `backend()` for convenience
     {
         return backend_.get();
     }

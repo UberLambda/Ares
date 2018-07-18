@@ -37,7 +37,7 @@ struct ImageFormat
         F32Depth, ///< Special format: 32-bit floating point depth.
                   ///  Use only a single `F32Depth` `r` channel in a depth texture.
 
-        Max = F32, ///< The maximum value the `Channel` enum may take.
+        Max = F32Depth, ///< The maximum value the `Channel` enum may take.
     };
 
 

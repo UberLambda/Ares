@@ -15,6 +15,7 @@ struct GfxPipeline
 
     struct VertexAttrib
     {
+        const char* name = nullptr;
         enum class Type : U8
         {
             F32 = 0,
@@ -27,9 +28,9 @@ struct GfxPipeline
 
     struct Pass
     {
-        static constexpr const unsigned int MAX_VERTEX_ATTRIBS = 4;
+        static constexpr const unsigned int MAX_VERTEX_ATTRIBS = 8;
         static constexpr const unsigned int MAX_TARGETS = 8;
-        static constexpr const unsigned int MAX_TEXTURES = 8;
+        static constexpr const unsigned int MAX_TEXTURES = 4;
 
         static const Handle<GfxTexture> SCREEN_TARGET; // Special texture handle to the screen's render target
 

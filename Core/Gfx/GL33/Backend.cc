@@ -15,7 +15,13 @@ Backend::Backend()
 
 ErrString Backend::init(Ref<GfxPipeline> pipeline)
 {
-    (void)this->~Backend(); // Destroy self in case `init()` has been called for a 2+ time
+    // This could be the first time `init()` is called, or a 2+ time in case the
+    // user wants to change the current pipeline.
+    // Do *NOT* call ~Backend()` here, it would destroy the textures created by
+    // the user to use as targets for the pipeline!
+
+    // Set pipeline now so that `createPassFbo()` and other functions can access it
+    pipeline_ = pipeline;
 
     // Generate `passData_` based on the passes in the pipeline
     size_t nPasses = pipeline->passes.size();
@@ -33,7 +39,6 @@ ErrString Backend::init(Ref<GfxPipeline> pipeline)
         }
     }
 
-    pipeline_ = pipeline;
     return {};
 }
 
@@ -73,7 +78,7 @@ static constexpr const GLenum GFXUSAGE_TO_GL[] =
     GL_STREAM_DRAW, // 2: Streaming
 };
 
-Handle<GfxBuffer> Backend::genBuffer(const GfxBufferDesc& desc, ErrString* err)
+Handle<GfxBuffer> Backend::genBuffer(const GfxBufferDesc& desc)
 {
     GLuint buffer = 0; glGenBuffers(1, &buffer);
     if(!buffer)
@@ -159,7 +164,7 @@ static constexpr const GLenum GFX_TEXTURE_MAG_FILTER_TO_GL[] = // (index by `Gfx
     GL_LINEAR, // Anisotropic (aka trilinear + anisotropic)
 };
 
-Handle<GfxTexture> Backend::genTexture(const GfxTextureDesc& desc, ErrString* err)
+Handle<GfxTexture> Backend::genTexture(const GfxTextureDesc& desc)
 {
     GLuint texture = 0; glGenTextures(1, &texture);
     if(!texture)
@@ -283,7 +288,7 @@ Handle<GfxShader> Backend::genShader(const GfxShaderDesc& desc, ErrString* err)
             if(*err)
             {
                 std::ostringstream errMsg;
-                errMsg << "Failed to compile " << oglDesc.name << " shader:\n" << oglErr;
+                errMsg << oglDesc.name << " shader compile error:\n" << oglErr;
                 *err = errMsg.str();
             }
             return {};
@@ -297,7 +302,7 @@ Handle<GfxShader> Backend::genShader(const GfxShaderDesc& desc, ErrString* err)
         if(*err)
         {
             std::ostringstream errMsg;
-            errMsg << "Failed to link shader program:\n" << oglErr;
+            errMsg << "Shader program link error:\n" << oglErr;
             *err = errMsg.str();
         }
         return {};
@@ -414,7 +419,7 @@ ErrString Backend::createPassFbo(U8 passId)
 
     glDrawBuffers(nColorAttachments, colorAttachments);
 
-    GLenum status = glCheckFramebufferStatus(fbo);
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if(status != GL_FRAMEBUFFER_COMPLETE)
     {
         err << ": FBO incomplete (status 0x" << std::hex << status << ")";

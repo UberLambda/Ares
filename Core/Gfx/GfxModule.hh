@@ -29,6 +29,13 @@ class GfxModule : public Module
     /// A graphics context should already be inited.
     bool createRenderer(Core& core);
 
+    /// Creates a texture to be used as `pipeline_`'s target with the given
+    /// resolution and image format.
+    /// Returns `false` on error.
+    /// `renderer_` should already be created, **but not inited yet**
+    Handle<GfxTexture> createPipelineTarget(Core& core, Resolution resolution,
+                                            ImageFormat format);
+
     /// Attempts to create `pipeline_`.
     /// Returns `false` on error.
     /// `renderer_` should already be created, **but not inited yet**

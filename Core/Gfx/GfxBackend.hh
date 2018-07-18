@@ -22,13 +22,19 @@ public:
     // **Hence the backend should be able to generate and delete resources AS SOON
     //   AS ITS CONSTRUCTOR IS RUN!**
     // Called by `GfxRenderer()`, do not call manually beforehand
+    //
+    // This needs **NOT** to destroy any resource when called, even if the pipeline has changed.
+    // This is because render targets and shaders for the pipeline are created before
+    // calling `init()` by the user and they could potentially get deleted along
+    // with the leftovers of the previous pipeline on `init()`!
     virtual ErrString init(Ref<GfxPipeline> pipeline) = 0;
 
     /// Must destroy all leftover resources.
     virtual ~GfxBackend() = default;
 
 
-    virtual Handle<GfxBuffer> genBuffer(const GfxBufferDesc& desc, ErrString* err=nullptr) = 0;
+    /// Returns 0 on error
+    virtual Handle<GfxBuffer> genBuffer(const GfxBufferDesc& desc) = 0;
 
     /// Invalidates the old data.
     /// Does nothing if the given handle is invalid.
@@ -41,7 +47,8 @@ public:
     virtual void delBuffer(Handle<GfxBuffer> buffer) = 0;
 
 
-    virtual Handle<GfxTexture> genTexture(const GfxTextureDesc& desc, ErrString* err=nullptr) = 0;
+    /// Returns 0 on error
+    virtual Handle<GfxTexture> genTexture(const GfxTextureDesc& desc) = 0;
 
     /// Invalidates the old data.
     /// Does nothing if the given handle is invalid.
@@ -56,6 +63,7 @@ public:
     virtual void delTexture(Handle<GfxTexture> texture) = 0;
 
 
+    /// Returns 0 and sets `err` on error
     virtual Handle<GfxShader> genShader(const GfxShaderDesc& desc, ErrString* err=nullptr) = 0;
 
     /// Does nothing if the given handle is invalid.

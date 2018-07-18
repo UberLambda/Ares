@@ -109,12 +109,12 @@ public:
     ErrString init(Ref<GfxPipeline> pipeline) override;
     ~Backend() override;
 
-    Handle<GfxBuffer> genBuffer(const GfxBufferDesc& desc, ErrString* err) override;
+    Handle<GfxBuffer> genBuffer(const GfxBufferDesc& desc) override;
     void resizeBuffer(Handle<GfxBuffer> buffer, size_t newSize) override;
     void editBuffer(Handle<GfxBuffer> buffer, size_t dataOffset, size_t dataSize, const void* data) override;
     void delBuffer(Handle<GfxBuffer> buffer) override;
 
-    Handle<GfxTexture> genTexture(const GfxTextureDesc& desc, ErrString* err) override;
+    Handle<GfxTexture> genTexture(const GfxTextureDesc& desc) override;
     void resizeTexture(Handle<GfxTexture> texture, Resolution newResolution) override;
     void editTexture(Handle<GfxTexture> texture, ViewRect dataRect, const void* data) override;
     void delTexture(Handle<GfxTexture> texture) override;

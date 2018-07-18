@@ -66,6 +66,19 @@ bool GfxModule::createRenderer(Core& core)
     return true;
 }
 
+Handle<GfxTexture> GfxModule::createPipelineTarget(Core& core, Resolution resolution,
+                                                   ImageFormat format)
+{
+    GfxTextureDesc desc;
+    desc.resolution = resolution;
+    desc.format = format;
+    desc.usage = GfxUsage::Streaming;
+    desc.minFilter = desc.magFilter = GfxTextureDesc::Filter::Nearest; // TODO Maybe bilinear?
+    desc.data = nullptr;
+
+    return renderer_->backend().genTexture(desc); // (Returns a 0 handle on error)
+}
+
 bool GfxModule::createPipeline(Core& core, Resolution resolution)
 {
     ARES_log(glog, Trace,
@@ -73,6 +86,63 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
              resolution);
 
     pipeline_ = makeRef<GfxPipeline>();
+    GfxBackend* backend = renderer_->operator ->();
+
+
+    using Pass = GfxPipeline::Pass;
+    using VA = GfxPipeline::VertexAttrib;
+    using Ch = ImageFormat::Channel;
+
+    // #0: PBR pass
+    // - Input attribs: matches `Mesh::Vertex`
+    // - Shader: PBR.arsh
+    // - Output targets:
+    //      * Color (RGBA16F, linear): RGB = color and lighting data, A = alpha
+    //      * Normals (RGB10A2, linear): RGB = Normals (rescaled from [-1..1] to [0..1])
+    //      * RMID (RGBA8, linear): R = roughness, G = metallicity,
+    //                              I+D = id of the entity packed as big endian U16
+    //      * Depth (32F)
+    Pass pbrPass;
+
+    pbrPass.vertexAttribs[0] = {"position", VA::Type::F32, 3};
+    pbrPass.vertexAttribs[1] = {"normal", VA::Type::F32, 3};
+    pbrPass.vertexAttribs[2] = {"tangent", VA::Type::F32, 4};
+    pbrPass.vertexAttribs[3] = {"texCoord0", VA::Type::F32, 2};
+    pbrPass.vertexAttribs[4] = {"texCoord1", VA::Type::F32, 2};
+    pbrPass.vertexAttribs[5] = {"color0", VA::Type::F32, 4};
+    pbrPass.nVertexAttribs = 6;
+
+    pbrPass.targets[0] = createPipelineTarget(core, resolution,
+                                              {Ch::F16, Ch::F16, Ch::F16, Ch::F16});
+    pbrPass.targets[1] = createPipelineTarget(core, resolution,
+                                              {Ch::UN10, Ch::UN10, Ch::UN10, Ch::UN2});
+    pbrPass.targets[2] = createPipelineTarget(core, resolution,
+                                              {Ch::UN8, Ch::UN8, Ch::UN8, Ch::UN8});
+    pbrPass.targets[3] = createPipelineTarget(core, resolution,
+                                              {Ch::F32Depth});
+    pbrPass.nTargets = 4;
+    pbrPass.clearTargets = true;
+
+    //pbrPass.shader = <>; // FIXME Load "PBR.arsh" ShaderSrc, `genShader()` it, set it here
+
+    pipeline_->passes.push_back(pbrPass);
+
+    // #1: Postprocess pass
+    // - Input attribs: none, generates fullscreen triangles in the vertex shader directly
+    // - Shader: Postprocess.arsh
+    // - Output targets:
+    //      * <Screen>
+    Pass ppPass;
+
+    ppPass.nVertexAttribs = 0;
+
+    ppPass.targets[0] = GfxPipeline::Pass::SCREEN_TARGET;
+    ppPass.nTargets = 1;
+    pbrPass.clearTargets = false; // No need to, only rendering fullscreen triangles
+
+    //pbrPass.shader = <>; // FIXME Load "Postprocess.arsh" ShaderSrc, `genShader()` it, set it here
+
+    pipeline_->passes.push_back(ppPass);
 
     return true;
 }

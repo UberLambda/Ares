@@ -12,7 +12,7 @@ enum class GfxUsage
 {
     Static = 0,
     Dynamic = 1,
-    Streaming = 2,
+    Streaming = 2, // Used for textures changed each frame, exp. if they are a Pass::target
 };
 
 struct GfxBuffer;
