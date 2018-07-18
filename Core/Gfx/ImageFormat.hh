@@ -34,6 +34,9 @@ struct ImageFormat
         F16, ///< 16-bit floating point number.
         F32, ///< 32-bit floating point number.
 
+        F32Depth, ///< Special format: 32-bit floating point depth.
+                  ///  Use only a single `F32Depth` `r` channel in a depth texture.
+
         Max = F32, ///< The maximum value the `Channel` enum may take.
     };
 
@@ -94,6 +97,12 @@ struct ImageFormat
             n += unsigned(channels[i] != Channel::None);
         }
         return n;
+    }
+
+    /// Returns `true` if this format is for a depth texture.
+    inline bool isDepth() const
+    {
+        return channels[0] == Channel::F32Depth;
     }
 
     /// Packs the type of the four channels of the image format into an `U32`;

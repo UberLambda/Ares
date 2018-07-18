@@ -31,13 +31,12 @@ struct GfxPipeline
         static constexpr const unsigned int MAX_TARGETS = 8;
         static constexpr const unsigned int MAX_TEXTURES = 8;
 
-        static constexpr const Handle<GfxTexture> SCREEN_TARGET{U32(-2)};
-        static constexpr const Handle<GfxTexture> DEPTH_TARGET{U32(-3)};
+        static const Handle<GfxTexture> SCREEN_TARGET; // Special texture handle to the screen's render target
 
         VertexAttrib vertexAttribs[MAX_VERTEX_ATTRIBS] = {};
         unsigned int nVertexAttribs = 0;
 
-        Handle<GfxTexture> target[MAX_TARGETS] = {SCREEN_TARGET};
+        Handle<GfxTexture> targets[MAX_TARGETS] = {SCREEN_TARGET};
         unsigned int nTargets = 1;
 
         Handle<GfxShader> shader{0};

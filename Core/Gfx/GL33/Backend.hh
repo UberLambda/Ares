@@ -29,7 +29,6 @@ private:
     {
         GLuint fbo;
         GLuint program;
-        unsigned int nTextures;
     };
     std::vector<PassData> passData_;
 
@@ -94,12 +93,15 @@ private:
     using VaoMap = std::unordered_map<VaoKey, Vao, VaoKeyHasher>;
     VaoMap vaos_;
 
-    struct Binding
+    struct Bindings
     {
-        Vao* vao = nullptr;
+        Vao* vao = nullptr; // Encapsulates vertex + index + instance buffers
+        GLuint ubo = 0;
 
     } curBindings_;
 
+
+    ErrString createPassFbo(U8 passId);
     void switchToPass(U8 nextPassId);
 
 public:

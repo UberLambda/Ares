@@ -15,6 +15,24 @@ Backend::Backend()
 
 ErrString Backend::init(Ref<GfxPipeline> pipeline)
 {
+    (void)this->~Backend(); // Destroy self in case `init()` has been called for a 2+ time
+
+    // Generate `passData_` based on the passes in the pipeline
+    size_t nPasses = pipeline->passes.size();
+    passData_.resize(nPasses);
+
+    for(size_t i = 0; i < nPasses; i ++)
+    {
+        const GfxPipeline::Pass& pass = pipeline->passes[i];
+        passData_[i].program = pass.shader;
+
+        ErrString fboErr = createPassFbo(i);
+        if(fboErr)
+        {
+            return fboErr;
+        }
+    }
+
     pipeline_ = pipeline;
     return {};
 }
@@ -22,18 +40,29 @@ ErrString Backend::init(Ref<GfxPipeline> pipeline)
 Backend::~Backend()
 {
     // Destroy all leftover resources
+    for(auto& passData : passData_)
+    {
+        glDeleteFramebuffers(1, &passData.fbo); passData.fbo = 0;
+    }
+    passData_.clear();
+
     for(const auto& bufIt : buffers_)
     {
         delBuffer(bufIt.first);
     }
+    buffers_.clear();
+
     for(const auto& texIt : textures_)
     {
         delTexture(texIt.first);
     }
+    textures_.clear();
+
     for(const auto& shdIt : shaders_)
     {
         delShader(shdIt);
     }
+    shaders_.clear();
 }
 
 
@@ -294,7 +323,6 @@ void Backend::changeResolution(Resolution resolution)
     glViewport(0, 0, resolution.width, resolution.height);
 }
 
-
 void Backend::switchToPass(U8 nextPassId)
 {
     const GfxPipeline::Pass& pass = pipeline_->passes[nextPassId];
@@ -313,6 +341,76 @@ void Backend::switchToPass(U8 nextPassId)
 
     curPassId_ = nextPassId;
 }
+
+ErrString Backend::createPassFbo(U8 passId)
+{
+    GLuint& fbo = passData_[passId].fbo;
+    const GfxPipeline::Pass& pass = pipeline_->passes[passId];
+
+    if(pass.targets[0] == GfxPipeline::Pass::SCREEN_TARGET)
+    {
+        // Render to the default framebuffer (i.e. the framebuffer with id 0)
+        fbo = 0;
+        return {};
+    }
+
+    std::ostringstream err;
+    err << "FBO for pass " << passId + 1;
+
+    glGenFramebuffers(1, &fbo);
+    if(!fbo)
+    {
+        err << ": Failed to create FBO";
+        return err.str();
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    unsigned int nColorAttachments = 0;
+    bool hasDepthAttachment = false;
+
+    // TODO Error out if `pass.nTargets > GfxPipeline::Pass::MAX_TARGETS`?
+    for(size_t i = 0; i < pass.nTargets; i ++)
+    {
+        Handle<GfxTexture> target = pass.targets[i];
+        auto descIt = textures_.find(target);
+        if(descIt == textures_.end())
+        {
+            err << ": Nonexisting target texture " << target;
+            return err.str();
+        }
+
+        if(!descIt->second.desc.format.isDepth())
+        {
+            glFramebufferTexture2D(GL_FRAMEBUFFER,
+                                   GL_COLOR_ATTACHMENT0 + nColorAttachments, GL_TEXTURE_2D,
+                                   target, 0);
+            nColorAttachments ++;
+        }
+        else
+        {
+            if(hasDepthAttachment)
+            {
+                err << ": More than one depth target";
+                return err.str();
+            }
+            glFramebufferTexture2D(GL_FRAMEBUFFER,
+                                   GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+                                   target, 0);
+            hasDepthAttachment = true;
+        }
+    }
+
+    GLenum status = glCheckFramebufferStatus(fbo);
+    if(status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        err << ": FBO incomplete (status 0x" << std::hex << status << ")";
+        return err.str();
+    }
+
+    return {};
+}
+
 
 static constexpr const GLenum GFX_VERTEXATTRIB_TYPE_TO_GL[] = // Index by `GfxPipeline::VertexAttrib::Type`
 {
@@ -378,18 +476,79 @@ Backend::Vao::~Vao()
 }
 
 
+// === CmdFuncs assume that some state has been bound for them by `runCmds()` ===
+// - shader program
+// - FBO
+// - VAO
+// - All textures
+// - UBO
+
+// TODO Add a "rendering mode" enum to the GfxPipeline::Pass to switch primitive
+//      type instead of just using GL_TRIANGLES?
+
+using CmdFunc = void(*)(const GfxCmd& cmd);
+
+inline static void cmdDraw(const GfxCmd& cmd)
+{
+    glDrawArrays(GL_TRIANGLES, cmd.first, cmd.n);
+}
+
+inline static void cmdDrawIndexed(const GfxCmd& cmd)
+{
+    glDrawElements(GL_TRIANGLES, cmd.n, GL_UNSIGNED_INT,
+                   (void*)(cmd.first * sizeof(GLuint)));
+}
+
+inline static void cmdDrawInstanced(const GfxCmd& cmd)
+{
+    glDrawArraysInstanced(GL_TRIANGLES, cmd.first, cmd.n,
+                          cmd.nInstances);
+}
+
+inline static void cmdDrawInstancedIndexed(const GfxCmd& cmd)
+{
+    glDrawElementsInstanced(GL_TRIANGLES, cmd.n, GL_UNSIGNED_INT,
+                            (void*)(cmd.first * sizeof(GLuint)),
+                            cmd.nInstances);
+}
+
+
+static constexpr const CmdFunc GFX_CMD_FUNCS[] = // Indexed by `GfxCmd::Op`
+{
+    cmdDraw, // 0: Draw
+    cmdDrawIndexed, // 1: DrawIndexed
+    cmdDrawInstanced, // 2: DrawInstanced
+    cmdDrawInstancedIndexed, // 3: DrawInstancedIndexed
+};
+
 void Backend::runCmds(const GfxCmd* cmds, const GfxCmdIndex* cmdsOrder, size_t n)
 {
     for(size_t i = 0; i < n; i ++)
     {
         const GfxCmd& cmd = cmds[cmdsOrder[i].index];
 
+        // Switch to the right pass if needed; rebinds the FBO and shader program
+        // The sorting key specifies all cmds for a specific pass to be run in sequence
         if(cmd.passId != curPassId_)
         {
-            // Switch to the next pass in the pipeline
             switchToPass(cmd.passId);
         }
 
+        // Bind the right textures if needed
+        for(unsigned int i = 0; i < cmd.nTextures; i ++)
+        {
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, cmd.textures[i]);
+        }
+
+        // Bind the right UBO if needed
+        if(curBindings_.ubo != cmd.uniformsBuffer)
+        {
+            glBindBuffer(GL_UNIFORM_BUFFER, cmd.uniformsBuffer);
+            curBindings_.ubo = cmd.uniformsBuffer;
+        }
+
+        // Bind the right buffers (via rebinding a VAO) if needed
         Vao*& curVao = curBindings_.vao;
         VaoKey cmdVaoKey = {cmd.passId, cmd.vertexBuffer, cmd.indexBuffer, cmd.instanceBuffer};
         if(!curVao || curVao->key != cmdVaoKey)
@@ -405,6 +564,10 @@ void Backend::runCmds(const GfxCmd* cmds, const GfxCmdIndex* cmdsOrder, size_t n
             glBindVertexArray(*curVao);
             curVao = &vaoIt->second;
         }
+
+        // Issue the actual command
+        auto func = GFX_CMD_FUNCS[unsigned(cmd.op)];
+        func(cmd);
     }
 }
 

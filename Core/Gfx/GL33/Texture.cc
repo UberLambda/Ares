@@ -45,6 +45,7 @@ static void populateInternalFormatTree()
     // Special formats
     gInternalFormatTree.at(Ch::UN10, Ch::UN10, Ch::UN10, Ch::UN2) = GL_RGB10_A2;
     gInternalFormatTree.at(Ch::U10, Ch::U10, Ch::U10, Ch::U2) = GL_RGB10_A2UI;
+    gInternalFormatTree.at(Ch::F32Depth) = GL_DEPTH_COMPONENT32F;
 }
 
 
@@ -59,9 +60,19 @@ bool textureFormats(GLenum& outFormat, GLenum& outInternalFormat,
         return false;
     }
 
-    // `format` depends only on the number of channels
+    // `format` depends on the number of channels
     static constexpr const GLenum textureFormats[] = { 0, GL_RED, GL_RG, GL_RGB, GL_RGBA };
-    outFormat = textureFormats[nChannels];
+
+    switch(imageFormat.channels[0])
+    {
+        case ImageFormat::Channel::F32Depth:
+            outFormat = GL_DEPTH_COMPONENT;
+        break;
+
+        default:
+            outFormat = textureFormats[nChannels];
+        break;
+    }
 
     // `internalFormat` needs to be looked up into the format tree
     // Look up each non-`None` channel in sequence in the format tree
