@@ -83,6 +83,9 @@ public:
     /// Attempts to parse and load a resource of type `T` in memory.
     /// Returns a non-empty `ErrString` on error, leaving `outRef` unchanged.
     ///
+    /// Note that the error string does not include the path of the resource, so
+    /// it would be helpful to log that on error.
+    ///
     /// Thread safe, but **not** lockless! This function is to be used sparingly
     /// at startup, not for being used in a critical path.
     template <typename T>
@@ -120,9 +123,7 @@ public:
         auto stream = fileStore_->getStream(resPath); // (assumed to be threadsafe)
         if(!stream)
         {
-            std::ostringstream errStr;
-            errStr << "Filestore could not find resource file: " << resPath;
-            return errStr.str();
+            return "Could not find resource";
         }
 
         // Allocate a refcounted `T` and try to parse it from file
