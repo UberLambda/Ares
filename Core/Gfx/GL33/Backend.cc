@@ -321,6 +321,10 @@ void Backend::delShader(Handle<GfxShader> shader)
 void Backend::changeResolution(Resolution resolution)
 {
     glViewport(0, 0, resolution.width, resolution.height);
+
+    // TODO Rebuild all pass FBOs here since the textures should have changed in size by the user?
+    //      Technically resizing a texture attached to a FBO is perfectly legal but it seems like
+    //      it breaks some OpenGL implementations...
 }
 
 void Backend::switchToPass(U8 nextPassId)
@@ -332,6 +336,11 @@ void Backend::switchToPass(U8 nextPassId)
     if(curPassData.fbo != nextPassData.fbo)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, nextPassData.fbo);
+    }
+
+    if(pass.clearTargets)
+    {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     if(curPassData.program != nextPassData.program)
@@ -366,6 +375,7 @@ ErrString Backend::createPassFbo(U8 passId)
 
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
+    GLuint colorAttachments[GfxPipeline::Pass::MAX_TARGETS];
     unsigned int nColorAttachments = 0;
     bool hasDepthAttachment = false;
 
@@ -385,6 +395,7 @@ ErrString Backend::createPassFbo(U8 passId)
             glFramebufferTexture2D(GL_FRAMEBUFFER,
                                    GL_COLOR_ATTACHMENT0 + nColorAttachments, GL_TEXTURE_2D,
                                    target, 0);
+            colorAttachments[nColorAttachments] = target;
             nColorAttachments ++;
         }
         else
@@ -400,6 +411,8 @@ ErrString Backend::createPassFbo(U8 passId)
             hasDepthAttachment = true;
         }
     }
+
+    glDrawBuffers(nColorAttachments, colorAttachments);
 
     GLenum status = glCheckFramebufferStatus(fbo);
     if(status != GL_FRAMEBUFFER_COMPLETE)

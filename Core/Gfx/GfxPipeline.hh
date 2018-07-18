@@ -36,8 +36,11 @@ struct GfxPipeline
         VertexAttrib vertexAttribs[MAX_VERTEX_ATTRIBS] = {};
         unsigned int nVertexAttribs = 0;
 
+        // For performance, all textures in `targets` should use Nearest or Bilinear
+        // filtering and **no mipmapping**!
         Handle<GfxTexture> targets[MAX_TARGETS] = {SCREEN_TARGET};
         unsigned int nTargets = 1;
+        bool clearTargets = true;
 
         Handle<GfxShader> shader{0};
     };
