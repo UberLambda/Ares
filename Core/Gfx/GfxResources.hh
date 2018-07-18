@@ -1,7 +1,9 @@
 #pragma once
 
 #include "../Base/Handle.hh"
+#include "../Base/Ref.hh"
 #include "../Resource/ShaderSrc.hh"
+#include "../Visual/Resolution.hh"
 #include "../Visual/Resolution.hh"
 #include "ImageFormat.hh"
 
@@ -52,7 +54,7 @@ struct GfxTextureDesc
 struct GfxShader;
 struct GfxShaderDesc
 {
-    ShaderSrc src;
+    Ref<ShaderSrc> src;
 };
 
 }

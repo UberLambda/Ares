@@ -1,0 +1,4 @@
+{
+    "vert": "Postprocess.vert.glsl",
+    "frag": "Postprocess.frag.glsl"
+}

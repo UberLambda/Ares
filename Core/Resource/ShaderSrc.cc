@@ -19,8 +19,9 @@ static ErrString readResourceFile(std::string& output, const Path& resPath,
     stream->seekg(0, std::ios::end);
     size_t fileSize = stream->tellg();
     stream->seekg(0, std::ios::beg);
-    output.resize(fileSize - 1);
-    stream->read(&output[0], fileSize); // (will overwrite the internal trailing '\0')
+
+    output.resize(fileSize, '\n');
+    stream->read(&output[0], fileSize);
 
     bool ok = stream->operator bool();
 

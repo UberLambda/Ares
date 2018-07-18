@@ -32,18 +32,24 @@ class GfxModule : public Module
     /// Creates a texture to be used as `pipeline_`'s target with the given
     /// resolution and image format.
     /// Returns `false` on error.
-    /// `renderer_` should already be created, **but not inited yet**
+    /// `renderer_` and its backend should already be created.
     Handle<GfxTexture> createPipelineTarget(Core& core, Resolution resolution,
                                             ImageFormat format);
 
+    /// Attempts to load a `ShaderSrc` resource at `path`, then compile the shader
+    /// and return its handle.
+    /// Returns a null handle and logs an error on failure.
+    /// `renderer_` and its backend should already be created.
+    Handle<GfxShader> loadShader(Core& core, const Path& path);
+
     /// Attempts to create `pipeline_`.
     /// Returns `false` on error.
-    /// `renderer_` should already be created, **but not inited yet**
+    /// `renderer_` and its backend should already be created, **but not inited yet**
     bool createPipeline(Core& core, Resolution resolution);
 
     /// Attempts to initialize `renderer_` after it and `pipeline_` have been created.
     /// Returns `false` on error.
-    /// `renderer_` and `pipeline_` should already be created.
+    /// `renderer_`, its backend and `pipeline_` should already be created.
     bool initPipelineAndRenderer(Core& core);
 
 public:

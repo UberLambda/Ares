@@ -262,16 +262,16 @@ struct GlShaderDesc
 {
     const char* name;
     GLenum type;
-    const char* source;
+    const std::string& source;
 };
 
 Handle<GfxShader> Backend::genShader(const GfxShaderDesc& desc, ErrString* err)
 {
     GlShaderDesc oglDescs[] =
     {
-        {"vertex", GL_VERTEX_SHADER, desc.src.vert.c_str()},
-        {"fragment", GL_FRAGMENT_SHADER, desc.src.frag.c_str()},
-        {"geometry", GL_GEOMETRY_SHADER, desc.src.geom.c_str()},
+        {"vertex", GL_VERTEX_SHADER, desc.src->vert},
+        {"fragment", GL_FRAGMENT_SHADER, desc.src->frag},
+        {"geometry", GL_GEOMETRY_SHADER, desc.src->geom},
         // FIXME: Also implement `src.tes`, `src.tcs` if have appropriate EXTs
     };
 
@@ -282,10 +282,16 @@ Handle<GfxShader> Backend::genShader(const GfxShaderDesc& desc, ErrString* err)
     for(int i = 0; i < sizeof(oglDescs) / sizeof(GlShaderDesc); i ++)
     {
         const GlShaderDesc& oglDesc = oglDescs[i];
-        oglErr = compileShader(oglShaders[i], oglDesc.type, oglDesc.source);
+        if(oglDesc.source.empty())
+        {
+            // Empty shader, go on with the next
+            continue;
+        }
+
+        oglErr = compileShader(oglShaders[i], oglDesc.type, oglDesc.source.c_str());
         if(oglErr)
         {
-            if(*err)
+            if(err)
             {
                 std::ostringstream errMsg;
                 errMsg << oglDesc.name << " shader compile error:\n" << oglErr;
@@ -299,7 +305,7 @@ Handle<GfxShader> Backend::genShader(const GfxShaderDesc& desc, ErrString* err)
                                oglShaders, oglShaders + sizeof(oglShaders) / sizeof(GLuint));
     if(oglErr)
     {
-        if(*err)
+        if(err)
         {
             std::ostringstream errMsg;
             errMsg << "Shader program link error:\n" << oglErr;
