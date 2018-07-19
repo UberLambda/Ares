@@ -162,14 +162,7 @@ public:
     /// Creates a new maptree with no nodes in it.
     MapTree()
     {
-        // Add the root node at index (and depth) 0.
-        // Its `T` key is default-constructed as the root's key is unused
-        // and its parent is set as `INVALID` since root is like Batman.
-        nodes_.emplace_back(T(), // Key
-                            INVALID, // Parent offset
-                            INVALID, // Next sibling offset
-                            0, // Depth
-                            INVALID); // Value index
+        clear();
     }
 
     /// Returns the number of nodes currently in the map tree.
@@ -179,11 +172,21 @@ public:
     }
 
     /// Clears the map.
-    /// This will clear all nodes in the map, their keys and their values.
+    /// This will clear all nodes in the map, their keys and their values, and insert
+    /// a new empty implicit root node.
     void clear()
     {
         nodes_.clear();
         values_.clear();
+
+        // Add the root node at index (and depth) 0.
+        // Its `T` key is default-constructed as the root's key is unused
+        // and its parent is set as `INVALID` since root is like Batman.
+        nodes_.emplace_back(T(), // Key
+                            INVALID, // Parent offset
+                            INVALID, // Next sibling offset
+                            0, // Depth
+                            INVALID); // Value index
     }
 
 
