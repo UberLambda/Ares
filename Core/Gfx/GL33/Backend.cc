@@ -30,9 +30,9 @@ ErrString Backend::init(Ref<GfxPipeline> pipeline)
     for(size_t i = 0; i < nPasses; i ++)
     {
         const GfxPipeline::Pass& pass = pipeline->passes[i];
+
         passData_[i].program = pass.shader;
         passData_[i].ubo = pass.uniformBuffer;
-
         ErrString fboErr = createPassFbo(i);
         if(fboErr)
         {
@@ -76,7 +76,7 @@ Backend::~Backend()
 }
 
 
-static constexpr const GLenum GFXUSAGE_TO_GL[] =
+static constexpr const GLenum GFXUSAGE_TO_GL[] = // Indexed by `GfxUsage`
 {
     GL_STATIC_DRAW, // 0: Static
     GL_DYNAMIC_DRAW, // 1: Dynamic
@@ -532,9 +532,9 @@ Backend::Vao::Vao(const GfxPipeline::Pass& pass, VaoKey key)
     // Required because the data is interleaved and not tightly packed, so the
     // stride must be passed to `glVertexAttribPointer`
     size_t vertexStride = 0, instanceStride = 0;
-    for(unsigned int i = 0; i < pass.nVertexAttribs; i ++)
+    for(unsigned int i = 0; i < pass.nAttribs; i ++)
     {
-        const auto& attrib = pass.vertexAttribs[i];
+        const auto& attrib = pass.attribs[i];
         size_t& attribStride = attrib.instanceDivisor == 0 ? vertexStride : instanceStride;
         attribStride += GFX_VERTEXATTRIB_TYPE_SIZE[unsigned(attrib.type)] * attrib.n;
     }
@@ -543,9 +543,9 @@ Backend::Vao::Vao(const GfxPipeline::Pass& pass, VaoKey key)
     // incrementing attribute offsets as needed
     GLuint boundBuffer = -1;
     size_t vertexOffset = 0, instanceOffset = 0;
-    for(unsigned int i = 0; i < pass.nVertexAttribs; i ++)
+    for(unsigned int i = 0; i < pass.nAttribs; i ++)
     {
-        const auto& attrib = pass.vertexAttribs[i];
+        const auto& attrib = pass.attribs[i];
 
         const GLuint* attribBuffer;
         const size_t* attribStride;

@@ -118,7 +118,7 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
     pipeline_ = makeRef<GfxPipeline>();
 
     using Pass = GfxPipeline::Pass;
-    using VA = GfxPipeline::VertexAttrib;
+    using VA = GfxPipeline::Attrib;
     using Ch = ImageFormat::Channel;
 
     // Load the required shaders for the passes
@@ -144,13 +144,13 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
     {
         Pass pbrPass;
 
-        pbrPass.vertexAttribs[0] = {"position", VA::Type::F32, 3};
-        pbrPass.vertexAttribs[1] = {"normal", VA::Type::F32, 3};
-        pbrPass.vertexAttribs[2] = {"tangent", VA::Type::F32, 4};
-        pbrPass.vertexAttribs[3] = {"texCoord0", VA::Type::F32, 2};
-        pbrPass.vertexAttribs[4] = {"texCoord1", VA::Type::F32, 2};
-        pbrPass.vertexAttribs[5] = {"color0", VA::Type::F32, 4};
-        pbrPass.nVertexAttribs = 6;
+        pbrPass.attribs[0] = {"position", VA::Type::F32, 3};
+        pbrPass.attribs[1] = {"normal", VA::Type::F32, 3};
+        pbrPass.attribs[2] = {"tangent", VA::Type::F32, 4};
+        pbrPass.attribs[3] = {"texCoord0", VA::Type::F32, 2};
+        pbrPass.attribs[4] = {"texCoord1", VA::Type::F32, 2};
+        pbrPass.attribs[5] = {"color0", VA::Type::F32, 4};
+        pbrPass.nAttribs = 6;
 
         pbrPass.targets[0] = createPipelineTarget(core, resolution,
                                                   {Ch::F16, Ch::F16, Ch::F16, Ch::F16});
@@ -178,7 +178,7 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
     {
         Pass ppPass;
 
-        ppPass.nVertexAttribs = 0;
+        ppPass.nAttribs = 0;
 
         ppPass.targets[0] = GfxPipeline::Pass::SCREEN_TARGET;
         ppPass.nTargets = 1;

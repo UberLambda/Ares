@@ -65,26 +65,18 @@ void GfxRenderer::orderFrameCmds(size_t n)
 
     // TODO PERFORMANCE Multithreaded (Task-based) index generation + sorting?
 
-    // Rebuild the material tree for this frame.
+    // Rebuild the texture tree for this frame.
     // Draw calls are grouped together by the textures they use.
     // After the tree is built, iterating into the tree will automatically give
     // the optimal binding order and, by accessing `iterator.index()`, also a
-    // sorting key for materials.
-
-    // There are **no** attempts to minimize vertex/index buffer rebinds!! This
-    // is because if the vertex/index buffers are the same you should not use 2+
-    // different `Draw[Indexed]` calls, but a single `Draw[Indexed]Instanced` call
-    // instead!
-    // TODO Could try to merge ("batch") `Draw[Indexed]` commands with the same
-    //      buffers to `Draw[Indexed]Instanced` calls here!
-
-    frameMaterials_.clear();
+    // sorting key to see which commands to run first.
+    frameTextures_.clear();
     for(size_t i = 0; i < n; i ++)
     {
         const GfxCmd& cmd = frameCmds_[i];
 
         // TODO Extract this to its own function (see below)
-        auto it = frameMaterials_.begin();
+        auto it = frameTextures_.begin();
         for(unsigned int i = 0;
             i < GfxCmd::MAX_TEXTURES && cmd.textures[i] != 0;
             i ++)
@@ -93,10 +85,17 @@ void GfxRenderer::orderFrameCmds(size_t n)
         }
     }
 
-    // Build the sorting indices
+    // There are **no** attempts to minimize vertex/index buffer rebinds!! This
+    // is because if the vertex/index buffers are the same you should not use 2+
+    // different `Draw[Indexed]` calls, but a single `Draw[Indexed]Instanced` call
+    // instead!
+    // TODO Could try to merge ("batch") `Draw[Indexed]` commands with the same
+    //      buffers to `Draw[Indexed]Instanced` calls here!
+
+    // Build the final 64-bit command sorting keys
     // Priority used for sorting:
     // - Rendering pass (lo to hi)
-    // - Material index
+    // - Textures used (minimize rebinds)
     static_assert(sizeof(GfxCmd::passId) == 1,
                   "Sort key generation code expects GfxCmd::pass to be an U8");
 
@@ -106,7 +105,7 @@ void GfxRenderer::orderFrameCmds(size_t n)
         GfxCmdIndex& cmdIndex = frameCmdsOrder_[i];
 
         // TODO Extract this to its own function (see above)
-        auto matIt = frameMaterials_.begin();
+        auto matIt = frameTextures_.begin();
         for(unsigned int i = 0;
             i < GfxCmd::MAX_TEXTURES && cmd.textures[i] != 0;
             i ++)
