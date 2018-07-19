@@ -44,12 +44,18 @@ ErrString linkShaderProgram(GLuint& outProgram, ShaderIterator begin, ShaderIter
 
     for(auto it = begin; it != end; it ++)
     {
-        glAttachShader(outProgram, *it);
+        if(*it != 0)
+        {
+            glAttachShader(outProgram, *it);
+        }
     }
     glLinkProgram(outProgram);
     for(auto it = begin; it != end; it ++)
     {
-        glDetachShader(outProgram, *it);
+        if(*it != 0)
+        {
+            glDetachShader(outProgram, *it);
+        }
     }
 
     auto err = checkShaderProgramLinkError(outProgram);

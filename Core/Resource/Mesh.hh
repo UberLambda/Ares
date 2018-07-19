@@ -63,13 +63,25 @@ public:
     /// `Vertex` structures are implicitly convertible to arrays of floats.
     inline const float* vertexData() const
     {
-        return reinterpret_cast<const float*>(&vertices_[0]);
+        return reinterpret_cast<const float*>(vertices_.data());
+    }
+
+    /// Returns the size in bytes of the `vertexData()` array.
+    inline size_t vertexDataSize() const
+    {
+        return vertices_.size() * sizeof(Vertex);
     }
 
     /// Returns the vertex index data as an array of indices.
     inline const Index* indexData() const
     {
-        return &indices_[0];
+        return indices_.data();
+    }
+
+    /// Returns the size in bytes of the `indexData()` array.
+    inline size_t indexDataSize() const
+    {
+        return indices_.size() * sizeof(Index);
     }
 };
 

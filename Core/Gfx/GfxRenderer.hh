@@ -42,6 +42,19 @@ public:
     /// [Re]initializes the backend with the given pipeline.
     ErrString init(Ref<GfxPipeline> pipeline);
 
+
+    template <typename CmdIterator>
+    inline void enqueueCmds(CmdIterator begin, size_t n)
+    {
+        cmdQueue_.enqueue_bulk(begin, n);
+    }
+
+    inline void enqueueCmd(const GfxCmd& cmd)
+    {
+        cmdQueue_.enqueue(cmd);
+    }
+
+
     inline Ref<GfxPipeline> pipeline() const
     {
         return pipeline_;
@@ -51,10 +64,12 @@ public:
     {
         return *backend_;
     }
+
     inline GfxBackend* operator->() // Alias of `backend()` for convenience
     {
         return backend_.get();
     }
+
 
     void renderFrame(Resolution resolution);
 };

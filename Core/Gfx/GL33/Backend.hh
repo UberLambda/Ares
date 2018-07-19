@@ -64,6 +64,17 @@ private:
         Vao(const GfxPipeline::Pass& pass, VaoKey key);
         ~Vao();
 
+        Vao(const Vao& toCopy) = delete;
+        Vao(Vao&& toMove)
+        {
+            // Move data over
+            key = toMove.key;
+            vao_ = toMove.vao_;
+
+            // Invalidate the moved instance
+            toMove.vao_ = 0;
+        }
+
         inline operator GLuint() const
         {
             return vao_;
@@ -95,7 +106,7 @@ private:
 
     struct Bindings
     {
-        Vao* vao = nullptr; // Encapsulates vertex + index + instance buffers
+        VaoKey vaoKey = {0, U32(-1), U32(-1), U32(-1)}; // Encapsulates vertex + index + instance buffers
         GLuint ubo = 0;
 
     } curBindings_;

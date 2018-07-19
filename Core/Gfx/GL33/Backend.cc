@@ -44,7 +44,8 @@ ErrString Backend::init(Ref<GfxPipeline> pipeline)
 
 Backend::~Backend()
 {
-    // Destroy all leftover resources
+    // v----- Destroy all leftover resources -----v
+
     for(auto& passData : passData_)
     {
         glDeleteFramebuffers(1, &passData.fbo); passData.fbo = 0;
@@ -53,19 +54,22 @@ Backend::~Backend()
 
     for(const auto& bufIt : buffers_)
     {
-        delBuffer(bufIt.first);
+        GLuint buffer = bufIt.first;
+        glDeleteBuffers(1, &buffer);
     }
     buffers_.clear();
 
     for(const auto& texIt : textures_)
     {
-        delTexture(texIt.first);
+        GLuint texture = texIt.first;
+        glDeleteTextures(1, &texture);
     }
     textures_.clear();
 
     for(const auto& shdIt : shaders_)
     {
-        delShader(shdIt);
+        GLuint program = shdIt;
+        glDeleteProgram(program);
     }
     shaders_.clear();
 }
@@ -195,8 +199,12 @@ Handle<GfxTexture> Backend::genTexture(const GfxTextureDesc& desc)
     // FIXME IMPORTANT **Load OpenGL anisotropic exension and apply anisotropy
     //                   at a Renderer-decided level to this texture if minFilter=Anisotropic**
 
-    // TODO PERFORMANCE Generate mipmaps only as needed, maybe on another thread?
-    glGenerateMipmap(GL_TEXTURE_2D);
+    if(desc.minFilter != GfxTextureDesc::Nearest
+       && desc.minFilter != GfxTextureDesc::Bilinear)
+    {
+        // Generate mipmaps only if required
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
 
     Handle<GfxTexture> handle(texture);
     textures_[handle] = {desc, format, internalFormat};
@@ -229,6 +237,7 @@ void Backend::editTexture(Handle<GfxTexture> texture, ViewRect dataRect, const v
     {
         return;
     }
+    const GfxTextureDesc& desc = descIt->second.desc;
 
     GLuint xOffset = dataRect.bottomLeft.x;
     GLuint yOffset = dataRect.topRight.y;
@@ -238,9 +247,16 @@ void Backend::editTexture(Handle<GfxTexture> texture, ViewRect dataRect, const v
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexSubImage2D(GL_TEXTURE_2D, 0,
                     xOffset, yOffset, width, height,
-                    descIt->second.format,
-                    GFX_TEXTURE_DATATYPE_TO_GL[unsigned(descIt->second.desc.dataType)],
+                    desc.format,
+                    GFX_TEXTURE_DATATYPE_TO_GL[unsigned(desc.dataType)],
                     data);
+
+    if(desc.minFilter != GfxTextureDesc::Nearest
+       && desc.minFilter != GfxTextureDesc::Bilinear)
+    {
+        // Generate mipmaps only if required
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
 }
 
 void Backend::delTexture(Handle<GfxTexture> texture)
@@ -303,6 +319,16 @@ Handle<GfxShader> Backend::genShader(const GfxShaderDesc& desc, ErrString* err)
 
     oglErr = linkShaderProgram(oglProgram,
                                oglShaders, oglShaders + sizeof(oglShaders) / sizeof(GLuint));
+
+    // Delete the shaders after attaching them to the program because they are not needed anymore
+    for(int i = 0; i < sizeof(oglDescs) / sizeof(GlShaderDesc); i ++)
+    {
+        if(oglShaders[i] != 0)
+        {
+            glDeleteShader(oglShaders[i]);
+        }
+    }
+
     if(oglErr)
     {
         if(err)
@@ -344,19 +370,22 @@ void Backend::switchToPass(U8 nextPassId)
     const PassData& curPassData = passData_[curPassId_];
     const PassData& nextPassData = passData_[nextPassId];
 
+    // Bind the fbo of the next pass if it changed
     if(curPassData.fbo != nextPassData.fbo)
     {
         glBindFramebuffer(GL_FRAMEBUFFER, nextPassData.fbo);
     }
 
+    // Clear the next pass' buffers if required
     if(pass.clearTargets)
     {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
+    // Bind the program of the next pass if it changed
     if(curPassData.program != nextPassData.program)
     {
-        glUseProgram(curPassData.program);
+        glUseProgram(nextPassData.program);
     }
 
     curPassId_ = nextPassId;
@@ -386,7 +415,7 @@ ErrString Backend::createPassFbo(U8 passId)
 
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
-    GLuint colorAttachments[GfxPipeline::Pass::MAX_TARGETS];
+    GLenum colorAttachments[GfxPipeline::Pass::MAX_TARGETS];
     unsigned int nColorAttachments = 0;
     bool hasDepthAttachment = false;
 
@@ -403,10 +432,11 @@ ErrString Backend::createPassFbo(U8 passId)
 
         if(!descIt->second.desc.format.isDepth())
         {
+            GLenum attachment = GL_COLOR_ATTACHMENT0 + nColorAttachments;
             glFramebufferTexture2D(GL_FRAMEBUFFER,
-                                   GL_COLOR_ATTACHMENT0 + nColorAttachments, GL_TEXTURE_2D,
+                                   attachment, GL_TEXTURE_2D,
                                    target, 0);
-            colorAttachments[nColorAttachments] = target;
+            colorAttachments[nColorAttachments] = attachment;
             nColorAttachments ++;
         }
         else
@@ -444,9 +474,9 @@ static constexpr const GLenum GFX_VERTEXATTRIB_TYPE_TO_GL[] = // Index by `GfxPi
 };
 static constexpr const size_t GFX_VERTEXATTRIB_TYPE_SIZE[] = // Index by `GfxPipeline::VertexAttrib::Type`
 {
-    4, // 0: F32
-    4, // 1: I32
-    4, // 2: U32
+    sizeof(F32), // 0: F32
+    sizeof(I32), // 1: I32
+    sizeof(U32), // 2: U32
 };
 
 Backend::Vao::Vao(const GfxPipeline::Pass& pass, VaoKey key)
@@ -460,35 +490,54 @@ Backend::Vao::Vao(const GfxPipeline::Pass& pass, VaoKey key)
 
     glBindVertexArray(vao_);
 
-    GLuint boundBuffer = 0;
+    // Calculate the stride for all attributes in the vertex buffer and all
+    // attributes in the index buffer.
+    // Required because the data is interleaved and not tightly packed, so the
+    // stride must be passed to `glVertexAttribPointer`
+    size_t vertexStride = 0, instanceStride = 0;
+    for(unsigned int i = 0; i < pass.nVertexAttribs; i ++)
+    {
+        const auto& attrib = pass.vertexAttribs[i];
+        size_t& attribStride = attrib.instanceDivisor == 0 ? vertexStride : instanceStride;
+        attribStride += GFX_VERTEXATTRIB_TYPE_SIZE[unsigned(attrib.type)] * attrib.n;
+    }
+
+    // Enable all attribs, binding either the vertex or instance buffer and
+    // incrementing attribute offsets as needed
+    GLuint boundBuffer = -1;
     size_t vertexOffset = 0, instanceOffset = 0;
-    size_t* boundOffset = nullptr;
     for(unsigned int i = 0; i < pass.nVertexAttribs; i ++)
     {
         const auto& attrib = pass.vertexAttribs[i];
 
+        const GLuint* attribBuffer;
+        const size_t* attribStride;
+        size_t* attribOffset;
+        if(attrib.instanceDivisor == 0)
+        {
+            attribBuffer = &key.vertexBuffer;
+            attribStride = &vertexStride;
+            attribOffset = &vertexOffset;
+        }
+        else
+        {
+            attribBuffer = &key.instanceBuffer;
+            attribStride = &instanceStride;
+            attribOffset = &instanceOffset;
+        }
+
+        if(boundBuffer != *attribBuffer)
+        {
+            glBindBuffer(GL_ARRAY_BUFFER, *attribBuffer);
+            boundBuffer = *attribBuffer;
+        }
         glEnableVertexAttribArray(i);
-
-        if(attrib.instanceDivisor == 0 && boundBuffer != key.vertexBuffer)
-        {
-            glBindBuffer(GL_ARRAY_BUFFER, key.vertexBuffer);
-            boundBuffer = key.vertexBuffer;
-            boundOffset = &vertexOffset;
-        }
-        else if(attrib.instanceDivisor != 0 && boundBuffer != key.instanceBuffer)
-        {
-            glVertexAttribDivisor(i, attrib.instanceDivisor);
-            glBindBuffer(GL_ARRAY_BUFFER, key.instanceBuffer);
-            boundBuffer = key.instanceBuffer;
-            boundOffset = &instanceOffset;
-        }
-
         glVertexAttribPointer(i,
                               attrib.n, GFX_VERTEXATTRIB_TYPE_TO_GL[unsigned(attrib.type)],
                               GL_FALSE,
-                              0, (void*)*boundOffset);
+                              *attribStride, (void*)*attribOffset);
 
-        *boundOffset += GFX_VERTEXATTRIB_TYPE_SIZE[unsigned(attrib.type)] * attrib.n;
+        *attribOffset += GFX_VERTEXATTRIB_TYPE_SIZE[unsigned(attrib.type)] * attrib.n;
     }
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, key.indexBuffer);
@@ -496,7 +545,10 @@ Backend::Vao::Vao(const GfxPipeline::Pass& pass, VaoKey key)
 
 Backend::Vao::~Vao()
 {
-    glDeleteVertexArrays(1, &vao_); vao_ = 0;
+    if(vao_)
+    {
+        glDeleteVertexArrays(1, &vao_); vao_ = 0;
+    }
 }
 
 
@@ -572,10 +624,9 @@ void Backend::runCmds(const GfxCmd* cmds, const GfxCmdIndex* cmdsOrder, size_t n
             curBindings_.ubo = cmd.uniformsBuffer;
         }
 
-        // Bind the right buffers (via rebinding a VAO) if needed
-        Vao*& curVao = curBindings_.vao;
+        // Bind the right vertex/instance attribute source buffers (via rebinding a VAO) if needed
         VaoKey cmdVaoKey = {cmd.passId, cmd.vertexBuffer, cmd.indexBuffer, cmd.instanceBuffer};
-        if(!curVao || curVao->key != cmdVaoKey)
+        if(curBindings_.vaoKey != cmdVaoKey)
         {
             // [Create] + switch to the required VAO
             auto vaoIt = vaos_.find(cmdVaoKey);
@@ -585,8 +636,8 @@ void Backend::runCmds(const GfxCmd* cmds, const GfxCmdIndex* cmdsOrder, size_t n
                 vaoIt = vaos_.insert(std::make_pair(cmdVaoKey, Vao(pass, cmdVaoKey))).first;
             }
 
-            glBindVertexArray(*curVao);
-            curVao = &vaoIt->second;
+            glBindVertexArray(vaoIt->second);
+            curBindings_.vaoKey = cmdVaoKey;
         }
 
         // Issue the actual command

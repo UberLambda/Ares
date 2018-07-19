@@ -12,6 +12,9 @@
 #include <flextGL.h>
 #include "GL33/Backend.hh"
 
+#include "../Resource/Mesh.hh" // FIXME!! TEST!!
+#include "GfxResources.hh" // FIXME!! TEST!!
+
 namespace Ares
 {
 
@@ -136,6 +139,7 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
     //      * Normals (RGB10A2, linear): RGB = Normals (rescaled from [-1..1] to [0..1])
     //      * RMID (RGBA8, linear): R = roughness, G = metallicity,
     //                              I+D = id of the entity packed as big endian U16
+    //      * Velocity (RGB16F, linear): RGB = velocity
     //      * Depth (32F)
     {
         Pass pbrPass;
@@ -155,8 +159,10 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
         pbrPass.targets[2] = createPipelineTarget(core, resolution,
                                                   {Ch::UN8, Ch::UN8, Ch::UN8, Ch::UN8});
         pbrPass.targets[3] = createPipelineTarget(core, resolution,
+                                                  {Ch::F16, Ch::F16, Ch::F16});
+        pbrPass.targets[4] = createPipelineTarget(core, resolution,
                                                   {Ch::F32Depth});
-        pbrPass.nTargets = 4;
+        pbrPass.nTargets = 5;
         pbrPass.clearTargets = true;
 
         pbrPass.shader = pbrShader;
@@ -204,6 +210,9 @@ bool GfxModule::initPipelineAndRenderer(Core& core)
     }
 }
 
+static Mesh gTestMesh; // FIXME!! TEST!!
+static Handle<GfxBuffer> gTestMeshVtxBuf, gTestMeshIdxBuf; // FIXME!! TEST!!
+
 bool GfxModule::init(Core& core)
 {
     window_ = core.g().facilities.get<Window>();
@@ -221,6 +230,24 @@ bool GfxModule::init(Core& core)
                  && createRenderer(core)
                  && createPipeline(core, initialResolution)
                  && initPipelineAndRenderer(core);
+
+    {   // FIXME!! TEST!!
+        static Mesh::Vertex testVertices[3];
+        testVertices[0].position = {-1, -1, 0};
+        testVertices[0].color0 = {1, 0, 0, 1};
+        testVertices[1].position = {1, -1, 0};
+        testVertices[1].color0 = {0, 1, 0, 1};
+        testVertices[2].position = {0, 1, 0};
+        testVertices[2].color0 = {0, 0, 1, 1};
+        gTestMesh.vertices().insert(gTestMesh.vertices().end(),
+                                    testVertices, testVertices + 3);
+        gTestMeshVtxBuf = backend_->genBuffer({gTestMesh.vertexDataSize(), gTestMesh.vertexData()});
+
+        gTestMesh.indices().push_back(0);
+        gTestMesh.indices().push_back(1);
+        gTestMesh.indices().push_back(2);
+        gTestMeshIdxBuf = backend_->genBuffer({gTestMesh.indexDataSize(), gTestMesh.indexData()});
+    }
 
     return allOk;
 }
@@ -256,6 +283,23 @@ void GfxModule::mainUpdate(Core& core)
     //       run will always be the ones generated for the previous frame,
     //       introducing a one-frame rendering lag
     window_->beginFrame();
+
+    {   // FIXME!! TEST!!
+        GfxCmd fullscreenPassCmd;
+        fullscreenPassCmd.op = GfxCmd::Draw;
+        fullscreenPassCmd.passId = 1;
+        fullscreenPassCmd.n = 3;
+        fullscreenPassCmd.vertexBuffer = {}; // (vertices are generated in the vertex shader)
+        renderer_->enqueueCmd(fullscreenPassCmd);
+
+        GfxCmd triRenderCmd;
+        triRenderCmd.op = GfxCmd::DrawIndexed;
+        triRenderCmd.passId = 0;
+        triRenderCmd.n = 3;
+        triRenderCmd.vertexBuffer = gTestMeshVtxBuf;
+        triRenderCmd.indexBuffer = gTestMeshIdxBuf;
+        renderer_->enqueueCmd(triRenderCmd);
+    }
 
     auto resolution = window_->resolution();
     renderer_->renderFrame(resolution);
