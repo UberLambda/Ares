@@ -29,6 +29,7 @@ private:
     {
         GLuint fbo;
         GLuint program;
+        GLuint ubo;
     };
     std::vector<PassData> passData_;
 

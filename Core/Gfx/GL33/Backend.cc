@@ -31,6 +31,7 @@ ErrString Backend::init(Ref<GfxPipeline> pipeline)
     {
         const GfxPipeline::Pass& pass = pipeline->passes[i];
         passData_[i].program = pass.shader;
+        passData_[i].ubo = pass.uniformBuffer;
 
         ErrString fboErr = createPassFbo(i);
         if(fboErr)
@@ -340,6 +341,31 @@ Handle<GfxShader> Backend::genShader(const GfxShaderDesc& desc, ErrString* err)
         return {};
     }
 
+    // Query if the `Uniforms` uniform interface block exists in the shader; if
+    // it does, bind its index to 0
+    GLuint uniformsIndex = glGetUniformBlockIndex(oglProgram, "Uniforms");
+    if(uniformsIndex != GL_INVALID_INDEX)
+    {
+        glUniformBlockBinding(oglProgram, uniformsIndex, 0);
+    }
+
+    // Find any `u_TextureN` uniforms in the shaders and bind them to texture unit
+    // `N`, for `N` in [0..MAX_TEXTURES]
+    // If GLSL supported `uniform sampler2D u_Texture0 = 1` this would not be required...
+    // TODO Find a more elegant way to do texture unit binding!
+    std::ostringstream textureUniformName;
+    for(unsigned int i = 0; i < GfxCmd::MAX_TEXTURES; i ++)
+    {
+        textureUniformName.str("");
+        textureUniformName << "u_Texture" << i;
+
+        GLint textureUniformIndex = glGetUniformLocation(oglProgram, textureUniformName.str().c_str());
+        if(textureUniformIndex >= 0)
+        {
+            glUniform1i(textureUniformIndex, i); // Bind `u_Texture$i` to `GL_TEXTURE$i`
+        }
+    }
+
     shaders_.emplace(oglProgram);
     return Handle<GfxShader>(oglProgram);
 }
@@ -386,6 +412,17 @@ void Backend::switchToPass(U8 nextPassId)
     if(curPassData.program != nextPassData.program)
     {
         glUseProgram(nextPassData.program);
+    }
+
+    // Rebind the pass' uniform buffer of the next pass if it changed.
+    // See the end of `genShader()`'s implementation
+    if(curPassData.ubo != nextPassData.ubo)
+    {
+        if(nextPassData.ubo != 0)
+        {
+            glBindBufferBase(GL_UNIFORM_BUFFER, 0, nextPassData.ubo);
+        }
+        glBindBuffer(GL_UNIFORM_BUFFER, nextPassData.ubo);
     }
 
     curPassId_ = nextPassId;
@@ -615,13 +652,6 @@ void Backend::runCmds(const GfxCmd* cmds, const GfxCmdIndex* cmdsOrder, size_t n
         {
             glActiveTexture(GL_TEXTURE0 + i);
             glBindTexture(GL_TEXTURE_2D, cmd.textures[i]);
-        }
-
-        // Bind the right UBO if needed
-        if(curBindings_.ubo != cmd.uniformsBuffer)
-        {
-            glBindBuffer(GL_UNIFORM_BUFFER, cmd.uniformsBuffer);
-            curBindings_.ubo = cmd.uniformsBuffer;
         }
 
         // Bind the right vertex/instance attribute source buffers (via rebinding a VAO) if needed

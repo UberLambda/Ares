@@ -31,7 +31,6 @@ struct GfxCmd
 
     Handle<GfxTexture> textures[MAX_TEXTURES];
     unsigned int nTextures = 0;
-    Handle<GfxBuffer> uniformsBuffer;
 };
 
 struct GfxCmdIndex

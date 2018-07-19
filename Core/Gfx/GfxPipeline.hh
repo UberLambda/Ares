@@ -30,7 +30,6 @@ struct GfxPipeline
     {
         static constexpr const unsigned int MAX_VERTEX_ATTRIBS = 8;
         static constexpr const unsigned int MAX_TARGETS = 8;
-        static constexpr const unsigned int MAX_TEXTURES = 4;
 
         static const Handle<GfxTexture> SCREEN_TARGET; // Special texture handle to the screen's render target
 
@@ -44,6 +43,7 @@ struct GfxPipeline
         bool clearTargets = true;
 
         Handle<GfxShader> shader{0};
+        Handle<GfxBuffer> uniformBuffer{0}; // Contains the data for the shader's `Uniforms` interface block.
     };
 
     std::vector<Pass> passes; // Do not exceed `MAX_PASSES` passes

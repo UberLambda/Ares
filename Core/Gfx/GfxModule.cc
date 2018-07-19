@@ -290,6 +290,14 @@ void GfxModule::mainUpdate(Core& core)
         fullscreenPassCmd.passId = 1;
         fullscreenPassCmd.n = 3;
         fullscreenPassCmd.vertexBuffer = {}; // (vertices are generated in the vertex shader)
+
+        const GfxPipeline::Pass& pbrPass = pipeline_->passes[0];
+        for(unsigned int i = 0; i < pbrPass.nTargets; i ++)
+        {
+            fullscreenPassCmd.textures[i] = pbrPass.targets[0];
+        }
+        fullscreenPassCmd.nTextures = pbrPass.nTargets;
+
         renderer_->enqueueCmd(fullscreenPassCmd);
 
         GfxCmd triRenderCmd;
