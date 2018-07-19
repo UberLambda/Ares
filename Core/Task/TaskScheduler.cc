@@ -237,6 +237,13 @@ void TaskScheduler::fiberFunc(void* data)
             std::atomic_fetch_sub(taskSlot.var, TaskVarValue(1));
         }
     }
+    else
+    {
+        // No more tasks, sleep for a bit to lower the CPU consumption
+        // FIXME >>IMPORTANT<< - Have a flag to let this sleep be disabled so
+        //       that the CPU can be used fully!!
+        std::this_thread::sleep_for(std::chrono::nanoseconds(1));
+    }
 
     if(!scheduler->running_)
     {
