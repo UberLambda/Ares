@@ -19,7 +19,7 @@ namespace Ares
 {
 
 GfxModule::GfxModule()
-    : window_(nullptr), renderer_(nullptr)
+    : window_(nullptr), resolution_{0, 0}, renderer_(nullptr)
 {
 }
 
@@ -189,6 +189,8 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
         pipeline_->passes.push_back(ppPass);
     }
 
+    resolution_ = resolution;
+
     return true;
 }
 
@@ -268,10 +270,28 @@ GfxModule::~GfxModule()
 }
 
 
+void GfxModule::changeResolution(Core& core, Resolution newResolution)
+{
+    ARES_log(glog, Trace, "Resolution changed: %s -> %s", resolution_, newResolution);
+
+    // Resize every render target to match the new resolution
+    // TODO IMPORTANT - "Render rescale" option for targets
+    for(const GfxPipeline::Pass& pass : pipeline_->passes)
+    {
+        for(unsigned int i = 0; i < pass.nTargets; i ++)
+        {
+            backend_->resizeTexture(pass.targets[i], newResolution);
+        }
+    }
+
+    resolution_ = newResolution;
+}
+
+
 void GfxModule::mainUpdate(Core& core)
 {
     // Poll events for the current and/or next frame[s]
-    // TODO: Move input polling somewhere else so that even if the rendering is
+    // TODO: Move input polling somewhere else so that even if the rendering isof `pipeline_`'s render targets accordingly
     //       lagging rendering won't suffer
     window_->pollEvents();
 
@@ -309,8 +329,13 @@ void GfxModule::mainUpdate(Core& core)
         renderer_->enqueueCmd(triRenderCmd);
     }
 
-    auto resolution = window_->resolution();
-    renderer_->renderFrame(resolution);
+    auto curResolution = window_->resolution();
+    if(curResolution != resolution_)
+    {
+        changeResolution(core, curResolution);
+    }
+
+    renderer_->renderFrame(resolution_);
 
     window_->endFrame();
 
