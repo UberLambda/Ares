@@ -101,6 +101,10 @@ struct GfxPipeline
         /// in use **before** the pipeline is set; its data can be updated at any
         /// time by the user afterwards.
         Handle<GfxBuffer> uniformBuffer{0};
+
+
+        /// Wether to enable depth testing or not for geometry drawn on this pass.
+        bool depthTestEnabled = true;
     };
 
 

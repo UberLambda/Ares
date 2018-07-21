@@ -27,9 +27,9 @@ private:
     U8 curPassId_ = 0;
     struct PassData
     {
-        GLuint fbo;
-        GLuint program;
-        GLuint ubo;
+        GLuint fbo = -1;
+        GLuint program = -1;
+        GLuint ubo = -1;
     };
     std::vector<PassData> passData_;
 

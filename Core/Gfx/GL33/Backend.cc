@@ -392,7 +392,8 @@ void Backend::changeResolution(Resolution resolution)
 
 void Backend::switchToPass(U8 nextPassId)
 {
-    const GfxPipeline::Pass& pass = pipeline_->passes[nextPassId];
+    const GfxPipeline::Pass& curPass = pipeline_->passes[curPassId_];
+    const GfxPipeline::Pass& nextPass = pipeline_->passes[nextPassId];
     const PassData& curPassData = passData_[curPassId_];
     const PassData& nextPassData = passData_[nextPassId];
 
@@ -403,7 +404,7 @@ void Backend::switchToPass(U8 nextPassId)
     }
 
     // Clear the next pass' buffers if required
-    if(pass.clearTargets)
+    if(nextPass.clearTargets)
     {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
@@ -423,6 +424,19 @@ void Backend::switchToPass(U8 nextPassId)
             glBindBufferBase(GL_UNIFORM_BUFFER, 0, nextPassData.ubo);
         }
         glBindBuffer(GL_UNIFORM_BUFFER, nextPassData.ubo);
+    }
+
+    // Enable/disable depth testing if required
+    if(curPass.depthTestEnabled != nextPass.depthTestEnabled)
+    {
+        if(nextPass.depthTestEnabled)
+        {
+            glEnable(GL_DEPTH_TEST);
+        }
+        else
+        {
+            glDisable(GL_DEPTH_TEST);
+        }
     }
 
     curPassId_ = nextPassId;
