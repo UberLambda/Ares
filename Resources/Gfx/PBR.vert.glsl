@@ -9,10 +9,17 @@ layout(location = 3) in vec2 vi_TexCoord0;
 layout(location = 4) in vec2 vi_TexCoord1;
 layout(location = 5) in vec4 vi_Color0;
 
+uniform Uniforms
+{
+    mat4 u_ViewProjection;
+};
+
+out vec3 vo_Normal;
 out vec4 vo_Color0;
 
 void main()
 {
-    gl_Position = vec4(vi_Position, 1.0);
+    gl_Position = u_ViewProjection * vec4(vi_Position, 1.0);
+    vo_Normal = vi_Normal;
     vo_Color0 = vi_Color0;
 }

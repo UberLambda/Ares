@@ -12,14 +12,31 @@
 #include <flextGL.h>
 #include "GL33/Backend.hh"
 
-#include "../Resource/Mesh.hh" // FIXME!! TEST!!
-#include "GfxResources.hh" // FIXME!! TEST!!
+// FIXME TEST!!
+#include <glm/mat4x4.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include "../Resource/Gltf.hh"
+#include "../Resource/Mesh.hh"
+#include "GfxResources.hh"
 
 namespace Ares
 {
 
+struct GfxModule::Data
+{
+    struct PbrUniformData
+    {
+        glm::mat4 viewProjection;
+    } pbrUniformData;
+    Handle<GfxBuffer> pbrUniformBuf;
+
+    Ref<Mesh> testMesh; // FIXME TEST!!
+    Handle<GfxBuffer> testMeshVtxBuf, testMeshIdxBuf; // FIXME TEST!!
+};
+
+
 GfxModule::GfxModule()
-    : window_(nullptr), resolution_{0, 0}, renderer_(nullptr)
+    : window_(nullptr), resolution_{0, 0}, renderer_(nullptr), data_(nullptr)
 {
 }
 
@@ -166,6 +183,12 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
         pbrPass.clearTargets = true;
 
         pbrPass.shader = pbrShader;
+        GfxBufferDesc uniformBufferDesc;
+        uniformBufferDesc.size = sizeof(Data::PbrUniformData);
+        uniformBufferDesc.data = nullptr;
+        uniformBufferDesc.usage = GfxUsage::Streaming;
+        data_->pbrUniformBuf = renderer_->backend().genBuffer(uniformBufferDesc);
+        pbrPass.uniformBuffer = data_->pbrUniformBuf;
 
         pipeline_->passes.push_back(pbrPass);
     }
@@ -185,6 +208,8 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
         ppPass.clearTargets = false; // No need to, only rendering fullscreen triangles
 
         ppPass.shader = ppShader;
+
+        ppPass.depthTestEnabled = false; // Not needed here, only drawing fullscreen triangles
 
         pipeline_->passes.push_back(ppPass);
     }
@@ -212,9 +237,6 @@ bool GfxModule::initPipelineAndRenderer(Core& core)
     }
 }
 
-static Mesh gTestMesh; // FIXME!! TEST!!
-static Handle<GfxBuffer> gTestMeshVtxBuf, gTestMeshIdxBuf; // FIXME!! TEST!!
-
 bool GfxModule::init(Core& core)
 {
     window_ = core.g().facilities.get<Window>();
@@ -226,6 +248,8 @@ bool GfxModule::init(Core& core)
         return false;
     }
 
+    data_ = new Data();
+
     Resolution initialResolution = window_->resolution();
 
     bool allOk = initGL(core)
@@ -233,22 +257,28 @@ bool GfxModule::init(Core& core)
                  && createPipeline(core, initialResolution)
                  && initPipelineAndRenderer(core);
 
-    {   // FIXME!! TEST!!
-        static Mesh::Vertex testVertices[3];
-        testVertices[0].position = {-1, -1, 0};
-        testVertices[0].color0 = {1, 0, 0, 1};
-        testVertices[1].position = {1, -1, 0};
-        testVertices[1].color0 = {0, 1, 0, 1};
-        testVertices[2].position = {0, 1, 0};
-        testVertices[2].color0 = {0, 0, 1, 1};
-        gTestMesh.vertices().insert(gTestMesh.vertices().end(),
-                                    testVertices, testVertices + 3);
-        gTestMeshVtxBuf = backend_->genBuffer({gTestMesh.vertexDataSize(), gTestMesh.vertexData()});
+    {   // FIXME TEST!!
+        static constexpr const char* testGltfName = "Debug/SuzanneColor0.glb";
 
-        gTestMesh.indices().push_back(0);
-        gTestMesh.indices().push_back(1);
-        gTestMesh.indices().push_back(2);
-        gTestMeshIdxBuf = backend_->genBuffer({gTestMesh.indexDataSize(), gTestMesh.indexData()});
+        Ref<Gltf> testGltf;
+        auto testGltfErr = core.g().resLoader->load<Gltf>(testGltf, testGltfName);
+        if(testGltfErr)
+        {
+            ARES_log(glog, Error, "Failed to load %s %s", testGltfName, testGltfErr);
+            return false;
+        }
+
+        data_->testMesh = testGltf->extractMesh(0U);
+        if(!data_->testMesh)
+        {
+            ARES_log(glog, Error, "Failed to extract mesh from %s", testGltfName);
+            return false;
+        }
+
+        data_->testMeshVtxBuf = backend_->genBuffer({data_->testMesh->vertexDataSize(),
+                                                     data_->testMesh->vertexData()});
+        data_->testMeshIdxBuf = backend_->genBuffer({data_->testMesh->indexDataSize(),
+                                                     data_->testMesh->indexData()});
     }
 
     return allOk;
@@ -256,6 +286,9 @@ bool GfxModule::init(Core& core)
 
 void GfxModule::halt(Core& core)
 {
+    // Destoy data
+    delete data_; data_ = nullptr;
+
     ARES_log(glog, Trace, "Destroying GfxRenderer");
     delete renderer_; renderer_ = nullptr;
 
@@ -304,7 +337,25 @@ void GfxModule::mainUpdate(Core& core)
     //       introducing a one-frame rendering lag
     window_->beginFrame();
 
-    {   // FIXME!! TEST!!
+    auto curResolution = window_->resolution();
+    if(curResolution != resolution_)
+    {
+        changeResolution(core, curResolution);
+    }
+
+    // Update uniform data for passes
+    renderer_->backend().editBuffer(data_->pbrUniformBuf,
+                                    0, sizeof(Data::PbrUniformData),
+                                    &data_->pbrUniformData);
+
+    {   // FIXME TEST!!
+        auto testPersp = glm::perspectiveFov(glm::radians(90.0f),
+                                             float(resolution_.width), float(resolution_.height),
+                                             1.0f, 1000.0f);
+        auto testView = glm::lookAt(glm::vec3(0.5f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+                                    glm::vec3(0.0f, 1.0f, 0.0f));
+        data_->pbrUniformData.viewProjection = testPersp * testView;
+
         GfxCmd fullscreenPassCmd;
         fullscreenPassCmd.op = GfxCmd::Draw;
         fullscreenPassCmd.passId = 1;
@@ -320,19 +371,13 @@ void GfxModule::mainUpdate(Core& core)
 
         renderer_->enqueueCmd(fullscreenPassCmd);
 
-        GfxCmd triRenderCmd;
-        triRenderCmd.op = GfxCmd::DrawIndexed;
-        triRenderCmd.passId = 0;
-        triRenderCmd.n = 3;
-        triRenderCmd.vertexBuffer = gTestMeshVtxBuf;
-        triRenderCmd.indexBuffer = gTestMeshIdxBuf;
-        renderer_->enqueueCmd(triRenderCmd);
-    }
-
-    auto curResolution = window_->resolution();
-    if(curResolution != resolution_)
-    {
-        changeResolution(core, curResolution);
+        GfxCmd testRenderCmd;
+        testRenderCmd.op = data_->testMeshIdxBuf ? GfxCmd::DrawIndexed : GfxCmd::Draw;
+        testRenderCmd.passId = 0;
+        testRenderCmd.vertexBuffer = data_->testMeshVtxBuf;
+        testRenderCmd.indexBuffer = data_->testMeshIdxBuf;
+        testRenderCmd.n = data_->testMesh->indices().size();
+        renderer_->enqueueCmd(testRenderCmd);
     }
 
     renderer_->renderFrame(resolution_);

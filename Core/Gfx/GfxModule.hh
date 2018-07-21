@@ -21,6 +21,9 @@ class GfxModule : public Module
     Ref<GfxPipeline> pipeline_; // (initialized/destroyed by `GfxModule`)
     GfxRenderer* renderer_; // (initialized/destroyed by `GfxModule`)
 
+    struct Data;
+    Data* data_; // (initialized/destroyed by `GfxModule`)
+
     /// Attempts to initialize OpenGL, returns `false` on error.
     /// `window_` should be inited for OpenGL 3.3+.
     bool initGL(Core& core);
