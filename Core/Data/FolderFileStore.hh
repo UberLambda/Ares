@@ -25,7 +25,7 @@ public:
         fullPathBuilder << root_ << '/' << path;
         Path fullPath = std::move(fullPathBuilder.str());
 
-        auto stream = new std::ifstream(fullPath);
+        auto stream = new std::ifstream(fullPath.str());
         if(!(*stream))
         {
             delete stream; stream = nullptr;

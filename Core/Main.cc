@@ -4,9 +4,11 @@
 
 #include "Visual/Window.hh"
 #include "Gfx/GfxModule.hh"
+#include "App/AppModule.hh"
 #ifndef NDEBUG
 #   include "Debug/DebugModule.hh"
 #endif
+#include "CoreConfig.h"
 
 using namespace Ares;
 
@@ -55,6 +57,15 @@ static bool addCoreModulesAndFacilities()
     ARES_log(glog, Trace, "Release/RelWithDebInfo build");
 #endif
 
+    // AppModule
+    static constexpr const char* appModuleDll =
+#ifdef ARES_PLATFORM_IS_WINDOWS
+        ARES_CORE_APP_DLL ".dll";
+#else
+        ARES_CORE_APP_DLL ".so";
+#endif
+    core.attachModule(intoRef<Module>(new AppModule(appModuleDll)));
+    nModulesAttachedHere ++;
 
     if(core.nAttachedModules() == nModulesAttachedHere)
     {

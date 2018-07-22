@@ -121,6 +121,11 @@ public:
         return path_;
     }
 
+    inline operator const char*()
+    {
+        return path_.c_str();
+    }
+
 
     inline bool operator==(const Path& other) const
     {
