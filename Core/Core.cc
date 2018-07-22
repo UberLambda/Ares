@@ -33,10 +33,11 @@ Core::~Core()
 
     g().log->flush();
 
-    // Detach and halt all modules that are still attached to the core
-    for(const auto& module : modules_)
+    // Detach and halt all modules that are still attached to the core, in reverse
+    // order of initialization
+    for(auto it = modules_.rbegin(); it != modules_.rend(); it ++)
     {
-        detachModule(module);
+        detachModule(*it);
     }
 
     // Perform one final log flush
@@ -171,7 +172,11 @@ bool Core::run()
         // threads; use `frameVar` as counter
         for(auto& module : modules_)
         {
-            g().scheduler->schedule(module->updateTask(*this), &frameVar);
+            Task updateTask = module->updateTask(*this);
+            if(updateTask)
+            {
+                g().scheduler->schedule(updateTask, &frameVar);
+            }
         }
 
         // Update everything that has to be updated on the main thread for each
