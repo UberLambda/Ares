@@ -4,6 +4,7 @@
 #include <memory>
 #include <typeinfo>
 #include <typeindex>
+#include <mutex>
 #include "EntityId.hh"
 #include "CompStore.hh"
 
@@ -21,7 +22,7 @@ class Scene
 
     using CompStoreSlot = std::unique_ptr<CompStoreBase>;
     std::unordered_map<std::type_index, CompStoreSlot> compStores_;
-
+    std::mutex compStoresLock_;
 
     Scene(Scene&& toMove) = delete;
     Scene& operator=(Scene&& toMove) = delete;
@@ -55,6 +56,8 @@ public:
     template <typename T>
     CompStore<T>* storeFor()
     {
+        std::lock_guard<std::mutex> compStoresScopedLock(compStoresLock_);
+
         auto slot = compStores_.find(typeid(T));
         if(slot == compStores_.end())
         {

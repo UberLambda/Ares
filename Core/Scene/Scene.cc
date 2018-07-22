@@ -23,6 +23,8 @@ EntityRef Scene::ref(EntityId entity)
 
 bool Scene::has(EntityId entity)
 {
+    std::lock_guard<std::mutex> compStoresScopedLock(compStoresLock_);
+
     bool present = false;
     for(auto it = compStores_.begin(); it != compStores_.end(); it ++)
     {
@@ -33,6 +35,8 @@ bool Scene::has(EntityId entity)
 
 void Scene::erase(EntityId entity)
 {
+    std::lock_guard<std::mutex> compStoresScopedLock(compStoresLock_);
+
     for(auto it = compStores_.begin(); it != compStores_.end(); it ++)
     {
         it->second->erase(entity);
