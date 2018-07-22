@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include "../Base/Ref.hh"
 #include "../Base/ErrString.hh"
-#include "../Visual/ViewRect.hh"
+#include "../Visual/ViewCube.hh"
 #include "GfxResources.hh"
 #include "GfxPipeline.hh"
 #include "GfxCmd.hh"
@@ -62,18 +62,27 @@ public:
     virtual Handle<GfxTexture> genTexture(const GfxTextureDesc& desc) = 0;
 
     /// Resizes the given texture. Does nothing if the given handle is null or invalid.
+    ///
     /// **This can invalidate any old data; call `editTexture()` afterwards to
     /// reload it into the texture if needed!**
     /// Does nothing if the given handle is invalid.
-    virtual void resizeTexture(Handle<GfxTexture> texture, Resolution newResolution) = 0;
+    ///
+    /// `newDepth` is ignored for 2D textures (depth is always 1) or cubemap ones
+    /// (depth is always 6).
+    virtual void resizeTexture(Handle<GfxTexture> texture,
+                               Resolution newResolution, size_t newDepth) = 0;
 
-    /// Edits the texture data inside `dataRect` in the texture to be `data`.
-    /// Does nothing if the given handle is null or invalid or `dataRect` is too
-    /// big / goes out of the texture's bounds.
+    /// Edits the texture data inside `dataCube` in the texture to be `data`.
     ///
     /// The type of the data to be supplied in `data` depends on the `dataType`
     /// in the `GfxTextureDesc` that was passed to `genTexture()` when the texture was created.
-    virtual void editTexture(Handle<GfxTexture> texture, ViewRect dataRect, const void* data) = 0;
+    /// Does nothing if the given handle is null or invalid or `dataRect` is too
+    /// big / goes out of the texture's bounds.
+    ///
+    /// For _2D textures `dataCube.zDepth()` must be `== 1` and the texture should
+    /// only edit layer 0; for _TCubemap textures `zDepth()` must be `<= 5`.
+    /// See: `GfxTextureDesc::Type` and `GfxTextureDesc::data`.
+    virtual void editTexture(Handle<GfxTexture> texture, ViewCube dataCube, const void* data) = 0;
 
     /// Deletes the given texture.
     /// Does nothing if the given handle is null or invalid.

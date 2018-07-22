@@ -313,7 +313,7 @@ void GfxModule::changeResolution(Core& core, Resolution newResolution)
     {
         for(unsigned int i = 0; i < pass.nTargets; i ++)
         {
-            backend_->resizeTexture(pass.targets[i], newResolution);
+            backend_->resizeTexture(pass.targets[i], newResolution, 1);
         }
     }
 

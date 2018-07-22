@@ -153,6 +153,21 @@ static constexpr const GLenum GFX_TEXTURE_DATATYPE_TO_GL[] = // (index by `GfxTe
     GL_FLOAT, // F32
 };
 
+static constexpr const GLenum GFX_TEXTURE_DATATYPE_SIZE[] = // (index by `GfxTextureDesc::DataType`)
+{
+    sizeof(U8), // U8
+    sizeof(U16), // U16
+    sizeof(F32), // F32
+};
+
+static constexpr GLenum GFX_TEXTURE_TYPE_TO_GL[] = // (index by `GfxTextureDesc::Type`)
+{
+    GL_TEXTURE_2D, // _2D: 0
+    GL_TEXTURE_2D_ARRAY, // _2DArray: 1
+    GL_TEXTURE_3D, // _3D: 2
+    GL_TEXTURE_CUBE_MAP, // Cubemap: 3
+};
+
 static constexpr const GLenum GFX_TEXTURE_MIN_FILTER_TO_GL[] = // (index by `GfxTextureDesc::Filter`)
 {
     GL_NEAREST, // Nearest
@@ -184,17 +199,64 @@ Handle<GfxTexture> Backend::genTexture(const GfxTextureDesc& desc)
         return {};
     }
 
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0,
-                 internalFormat,
-                 desc.resolution.width, desc.resolution.height,
-                 0,
-                 format,
-                 GFX_TEXTURE_DATATYPE_TO_GL[unsigned(desc.dataType)], desc.data);
+    GLenum bindPoint = GFX_TEXTURE_TYPE_TO_GL[unsigned(desc.type)];
+    glBindTexture(bindPoint, texture);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+    switch(desc.type)
+    {
+
+    case GfxTextureDesc::_2D:
+    {
+        // Load a 2D image of resolution W x H
+        glTexImage2D(bindPoint, 0,
+                     internalFormat,
+                     desc.resolution.width, desc.resolution.height,
+                     0,
+                     format,
+                     GFX_TEXTURE_DATATYPE_TO_GL[unsigned(desc.dataType)], desc.data);
+    }
+    break;
+
+    case GfxTextureDesc::Cubemap:
+    {
+        // Load 6 2D images each with resolution W x H
+
+        GLenum faceDataType = GFX_TEXTURE_DATATYPE_TO_GL[unsigned(desc.dataType)];
+        size_t faceDataStride = GFX_TEXTURE_DATATYPE_SIZE[unsigned(desc.dataType)]
+                                * desc.format.nChannelsSet()
+                                * desc.resolution.width * desc.resolution.height;
+        // faceDataStride == the size in bytes of each face's texel data
+
+        const U8* faceData = reinterpret_cast<const U8*>(desc.data);
+        for(int i = 0; i < 6; i ++)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+                         internalFormat,
+                         desc.resolution.width, desc.resolution.height,
+                         0,
+                         format,
+                         faceDataType, faceData);
+            faceData += faceDataStride;
+        }
+    }
+    break;
+
+    default: // _2DArray, _3D
+    {
+        glTexImage3D(bindPoint, 0,
+                     internalFormat,
+                     desc.resolution.width, desc.resolution.height, desc.depth,
+                     0,
+                     format,
+                     GFX_TEXTURE_DATATYPE_TO_GL[unsigned(desc.dataType)], desc.data);
+    }
+    break;
+
+    }
+
+    glTexParameteri(bindPoint, GL_TEXTURE_MIN_FILTER,
                     GFX_TEXTURE_MIN_FILTER_TO_GL[unsigned(desc.minFilter)]);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+    glTexParameteri(bindPoint, GL_TEXTURE_MAG_FILTER,
                     GFX_TEXTURE_MAG_FILTER_TO_GL[unsigned(desc.magFilter)]);
 
     // FIXME IMPORTANT **Load OpenGL anisotropic exension and apply anisotropy
@@ -203,8 +265,13 @@ Handle<GfxTexture> Backend::genTexture(const GfxTextureDesc& desc)
     if(desc.minFilter != GfxTextureDesc::Nearest
        && desc.minFilter != GfxTextureDesc::Bilinear)
     {
-        // Generate mipmaps only if required
-        glGenerateMipmap(GL_TEXTURE_2D);
+        // Generate mipmaps; required by this `minFilter`
+        glGenerateMipmap(bindPoint);
+    }
+    else
+    {
+        // Disable mipmaps for this texture completely; this `minFilter` does not use them
+        glTexParameteri(bindPoint, GL_TEXTURE_MAX_LEVEL, 0);
     }
 
     Handle<GfxTexture> handle(texture);
@@ -212,7 +279,8 @@ Handle<GfxTexture> Backend::genTexture(const GfxTextureDesc& desc)
     return handle;
 }
 
-void Backend::resizeTexture(Handle<GfxTexture> texture, Resolution newResolution)
+void Backend::resizeTexture(Handle<GfxTexture> texture,
+                            Resolution newResolution, size_t newDepth)
 {
     auto descIt = textures_.find(texture);
     if(!texture || descIt == textures_.end())
@@ -220,18 +288,61 @@ void Backend::resizeTexture(Handle<GfxTexture> texture, Resolution newResolution
         return;
     }
 
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0,
-                 descIt->second.internalFormat,
-                 newResolution.width, newResolution.height,
-                 0,
-                 descIt->second.format,
-                 GL_FLOAT, nullptr);
+    TextureDesc& texDesc = descIt->second;
 
-    descIt->second.desc.resolution = newResolution;
+    GLenum bindPoint = GFX_TEXTURE_TYPE_TO_GL[unsigned(texDesc.desc.type)];
+    glBindTexture(bindPoint, texture);
+
+    texDesc.desc.resolution = newResolution;
+
+    switch(texDesc.desc.type)
+    {
+
+    case GfxTextureDesc::_2D:
+    {
+        // Change the 2D texture's resolution
+        glTexImage2D(bindPoint, 0,
+                     texDesc.internalFormat,
+                     newResolution.width, newResolution.height,
+                     0,
+                     texDesc.format,
+                     GL_FLOAT, nullptr);
+    }
+    break;
+
+    case GfxTextureDesc::Cubemap:
+    {
+        // Change each of the 6 cubemap 2D textures' resolutions
+        for(int i = 0; i < 6; i ++)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+                         texDesc.internalFormat,
+                         newResolution.width, newResolution.height,
+                         0,
+                         texDesc.format,
+                         GL_FLOAT, nullptr);
+        }
+    }
+    break;
+
+    default: // _2DArray, _3D
+    {
+        // Change each the 3D/2D array textures' resolution (W x H x D or (W x H) x layers)
+        glTexImage3D(bindPoint, 0,
+                     texDesc.internalFormat,
+                     newResolution.width, newResolution.height, newDepth,
+                     0,
+                     texDesc.format,
+                     GL_FLOAT, nullptr);
+
+        texDesc.desc.depth = newDepth;
+    }
+    break;
+
+    }
 }
 
-void Backend::editTexture(Handle<GfxTexture> texture, ViewRect dataRect, const void* data)
+void Backend::editTexture(Handle<GfxTexture> texture, ViewCube dataCube, const void* data)
 {
     auto descIt = textures_.find(texture);
     if(!texture || descIt == textures_.end())
@@ -240,23 +351,73 @@ void Backend::editTexture(Handle<GfxTexture> texture, ViewRect dataRect, const v
     }
     const GfxTextureDesc& desc = descIt->second.desc;
 
-    GLuint xOffset = dataRect.bottomLeft.x;
-    GLuint yOffset = dataRect.topRight.y;
-    GLuint width = dataRect.topRight.x - xOffset;
-    GLuint height = yOffset - dataRect.bottomLeft.y;
+    GLenum bindPoint = GFX_TEXTURE_TYPE_TO_GL[unsigned(desc.type)];
+    glBindTexture(bindPoint, texture);
 
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexSubImage2D(GL_TEXTURE_2D, 0,
-                    xOffset, yOffset, width, height,
-                    desc.format,
-                    GFX_TEXTURE_DATATYPE_TO_GL[unsigned(desc.dataType)],
-                    data);
+    GLuint xOffset = dataCube.topFrontLeft.x;
+    GLuint yOffset = dataCube.topFrontLeft.y;
+    GLuint width = dataCube.bottomBackRight.x - dataCube.topFrontLeft.x;
+    GLuint height = dataCube.bottomBackRight.y - dataCube.topFrontLeft.y;
+
+    switch(desc.type)
+    {
+
+    case GfxTextureDesc::_2D:
+    {
+        // Change the width*height area at +xOffset,yOffset in the 2D texture
+        glTexSubImage2D(bindPoint, 0,
+                        xOffset, yOffset, width, height,
+                        desc.format,
+                        GFX_TEXTURE_DATATYPE_TO_GL[unsigned(desc.dataType)], data);
+    }
+    break;
+
+    case GfxTextureDesc::Cubemap:
+    {
+        // Change the width*height area at +xOffset,yOffset in the each of the 2D texture
+        // of face `z` for each `z € [0, 6)` layer in `dataCube`
+
+        GLenum faceDataType = GFX_TEXTURE_DATATYPE_TO_GL[unsigned(desc.dataType)];
+        size_t faceSubDataStride = GFX_TEXTURE_DATATYPE_SIZE[unsigned(desc.dataType)]
+                                * desc.format.nChannelsSet()
+                                * width * height;
+        // faceSubDataStride == the size in bytes of each face's `width * height`
+        // texel data that is to be uploaded
+
+        const U8* faceSubData = reinterpret_cast<const U8*>(data);
+        for(int z = dataCube.topFrontLeft.z; z < dataCube.bottomBackRight.z && z < 6; z ++)
+        {
+            glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + z, 0,
+                            xOffset, yOffset, width, height,
+                            desc.format,
+                            faceDataType, faceSubData);
+            faceSubData += faceSubDataStride;
+        }
+    }
+    break;
+
+    default: // _2DArray, _3D
+    {
+        // Change the width*height*depth area at +xOffset,yOffset,zOffset in the 3D/2D array texture
+        GLuint zOffset = dataCube.topFrontLeft.z;
+        GLuint depth = dataCube.bottomBackRight.z - dataCube.topFrontLeft.z;
+
+        glTexSubImage3D(bindPoint, 0,
+                        xOffset, yOffset, zOffset, width, height, depth,
+                        desc.format,
+                        GFX_TEXTURE_DATATYPE_TO_GL[unsigned(desc.dataType)],
+                        data);
+    }
+    break;
+
+    }
+
 
     if(desc.minFilter != GfxTextureDesc::Nearest
        && desc.minFilter != GfxTextureDesc::Bilinear)
     {
-        // Generate mipmaps only if required
-        glGenerateMipmap(GL_TEXTURE_2D);
+        // Regenerate mipmaps if they are required by this `minFilter`
+        glGenerateMipmap(bindPoint);
     }
 }
 

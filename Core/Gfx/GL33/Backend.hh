@@ -127,8 +127,8 @@ public:
     void delBuffer(Handle<GfxBuffer> buffer) override;
 
     Handle<GfxTexture> genTexture(const GfxTextureDesc& desc) override;
-    void resizeTexture(Handle<GfxTexture> texture, Resolution newResolution) override;
-    void editTexture(Handle<GfxTexture> texture, ViewRect dataRect, const void* data) override;
+    void resizeTexture(Handle<GfxTexture> texture, Resolution newResolution, size_t newDepth) override;
+    void editTexture(Handle<GfxTexture> texture, ViewCube dataCube, const void* data) override;
     void delTexture(Handle<GfxTexture> texture) override;
 
     Handle<GfxShader> genShader(const GfxShaderDesc& desc, ErrString* err) override;
