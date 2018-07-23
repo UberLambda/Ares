@@ -20,6 +20,9 @@ class Ref
     template <typename U>
     friend Ref<U> intoRef(U* t);
 
+    template <typename U>
+    friend class std::hash;
+
 
     /// A `T` allocated on the heap.
     struct THeapBox
@@ -323,5 +326,20 @@ inline Ref<T> intoRef(T* t)
     ref.data_ = new RefData{{t}, {1}};
     return std::move(ref);
 }
+
+}
+
+namespace std
+{
+
+template <typename T>
+class hash<Ares::Ref<T>>
+{
+public:
+    inline size_t operator()(const Ares::Ref<T>& value) const
+    {
+        return reinterpret_cast<intptr_t>(value.data_.load());
+    }
+};
 
 }
