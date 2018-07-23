@@ -82,14 +82,15 @@ static bool fsReadWholeFile(std::vector<unsigned char>* out, std::string* err,
     stream->seekg(0, std::ios::beg);
 
     stream->read(reinterpret_cast<char*>(&out[0]), out->size());
-    if(!(*stream))
-    {
-      if(err)
-      {
-          *err = "File read error";
-      }
-      return false;
-    }
+    // FIXME `istream::operator bool()` returns false here on Windows with no apparent reason
+    //if(!(*stream))
+    //{
+    //  if(err)
+    //  {
+    //      *err = "File read error";
+    //  }
+    //  return false;
+    //}
 
     return true;
 }
@@ -150,11 +151,12 @@ ErrString ResourceParser<Gltf>::parse(Gltf& outGltf,
     data.resize(stream.tellg());
     stream.seekg(0, std::ios::beg);
 
+    // FIXME Could error out on Windows
     stream.read(reinterpret_cast<char*>(&data[0]), data.size());
-    if(!stream)
-    {
-        return ErrString("File read error");
-    }
+    //if(!stream)
+    //{
+    //    return ErrString("File read error");
+    //}
 
     bool ok;
     std::string tgltfErr;
@@ -274,7 +276,7 @@ Ref<Mesh> Gltf::extractMesh(unsigned int index) const
 
         // NOTE `tinygltf::GetTypeSizeInBytes()` actually returns the number of
         //      components in a {`SCALAR`, `VEC2`, `VEC3`...), not the size in bytes!
-        if(tinygltf::GetTypeSizeInBytes(accessor.type) > attribMeta.nComponents)
+        if(unsigned(tinygltf::GetTypeSizeInBytes(accessor.type)) > attribMeta.nComponents)
         {
             // Attribute has more components than what vertex can store;
             // silently skip it
