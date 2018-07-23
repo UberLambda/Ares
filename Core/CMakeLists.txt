@@ -30,6 +30,8 @@ set_target_properties(Ares.Core PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/build/"
     OUTPUT_NAME Ares
     CXX_STANDARD 14
+
+    ENABLE_EXPORTS ON # So that App.so/App.dll can link to Ares' executable
 )
 
 option(ARES_STRIP_EXECUTABLE "Strip Ares executables in release build" ON)
