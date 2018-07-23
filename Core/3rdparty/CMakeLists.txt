@@ -63,7 +63,7 @@ target_include_directories(tinyformat INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/tin
 # == rpmalloc (optional)
 # == Upstream: https://github.com/rampantpixels/rpmalloc [in-tree, custom build steps]
 # == License: public domain
-option(ARES_USE_RPMALLOC "Use rpmalloc instead of the default memory allocator" ON)
+option(ARES_USE_RPMALLOC "Use rpmalloc instead of the default memory allocator" OFF)
 if(ARES_USE_RPMALLOC)
     set(RPMALLOC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/rpmalloc")
 
