@@ -14,7 +14,7 @@ namespace Ares
 struct GfxCmd
 {
     /// The maximum number of textures that can be bound at a time for the command.
-    static const unsigned int MAX_TEXTURES = 4;
+    static const unsigned int MAX_TEXTURES = 8;
 
 
     enum Op : U8
@@ -62,13 +62,13 @@ struct GfxCmd
     Handle<GfxBuffer> instanceBuffer;
 
     /// The first vertex or index to draw; see `Op::Draw`, `Op::DrawIndexed`.
-    unsigned int first = 0;
+    size_t first = 0;
 
     /// The number of vertex or indices to draw; see `Op::Draw`, `Op::DrawIndexed`.
-    unsigned int n = 0;
+    size_t n = 0;
 
     /// The number of instances to draw; see `Op::DrawInstanced`
-    unsigned int nInstances = 0;
+    size_t nInstances = 0;
 
     /// The textures to be bound to texture inputs in the `GfxPipeline::Pass`'
     /// shader for this command.

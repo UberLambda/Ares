@@ -1,10 +1,18 @@
 #include "GfxModule.hh"
 
 #include <utility>
+#include <unordered_map>
+#include <glm/mat4x4.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include "../Core.hh"
 #include "../Debug/Log.hh"
 #include "../Data/ResourceLoader.hh"
 #include "../Visual/Window.hh"
+#include "../Resource/Mesh.hh"
+#include "../Scene/Scene.hh"
+#include "../Scene/SceneIterator.hh"
+#include "../Comp/TransformComp.hh"
+#include "../Comp/MeshComp.hh"
 #include "GfxRenderer.hh"
 #include "GfxBackend.hh"
 
@@ -12,26 +20,26 @@
 #include <flextGL.h>
 #include "GL33/Backend.hh"
 
-// FIXME TEST!!
-#include <glm/mat4x4.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include "../Resource/Gltf.hh"
-#include "../Resource/Mesh.hh"
-#include "GfxResources.hh"
-
 namespace Ares
 {
 
 struct GfxModule::Data
 {
-    struct PbrUniformData
+    struct PbrUniforms
     {
-        glm::mat4 viewProjection;
-    } pbrUniformData;
-    Handle<GfxBuffer> pbrUniformBuf;
+        glm::mat4 camViewProj;
 
-    Ref<Mesh> testMesh; // FIXME TEST!!
-    Handle<GfxBuffer> testMeshVtxBuf, testMeshIdxBuf; // FIXME TEST!!
+    } pbrUniforms;
+    Handle<GfxBuffer> pbrUniformsBuffer;
+
+    struct MeshBatch
+    {
+        size_t count;
+        std::vector<glm::mat4> modelMatrices;
+        Handle<GfxBuffer> vertexBuffer = {}, indexBuffer = {}, instanceBuffer = {};
+        size_t vertexBufferSize = 0, indexBufferSize = 0, instanceBufferSize = 0;
+    };
+    std::unordered_map<Ref<Mesh>, MeshBatch> meshMap_;
 };
 
 
@@ -130,8 +138,6 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
              "Creating GfxPipeline (initial resolution: %s)",
              resolution);
 
-    GfxBackend& backend = renderer_->backend();
-
     pipeline_ = makeRef<GfxPipeline>();
 
     using Pass = GfxPipeline::Pass;
@@ -149,7 +155,9 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
     }
 
     // #0: PBR pass
-    // - Input attribs: matches `Mesh::Vertex`
+    // - Input attribs:
+    //      * [0..5]: Matching `Mesh::Vertex`'s ones
+    //      * [6..9] : Model matrix for the drawn instance, split into 4 vec4s
     // - Shader: PBR.arsh
     // - Output targets:
     //      * Color (RGBA16F, linear): RGB = color and lighting data, A = alpha
@@ -167,7 +175,11 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
         pbrPass.attribs[3] = {"texCoord0", VA::Type::F32, 2};
         pbrPass.attribs[4] = {"texCoord1", VA::Type::F32, 2};
         pbrPass.attribs[5] = {"color0", VA::Type::F32, 4};
-        pbrPass.nAttribs = 6;
+        pbrPass.attribs[6] = {"modelMatrixR0", VA::Type::F32, 4, 1};
+        pbrPass.attribs[7] = {"modelMatrixR1", VA::Type::F32, 4, 1};
+        pbrPass.attribs[8] = {"modelMatrixR2", VA::Type::F32, 4, 1};
+        pbrPass.attribs[9] = {"modelMatrixR3", VA::Type::F32, 4, 1};
+        pbrPass.nAttribs = 10;
 
         pbrPass.targets[0] = createPipelineTarget(core, resolution,
                                                   {Ch::F16, Ch::F16, Ch::F16, Ch::F16});
@@ -183,12 +195,13 @@ bool GfxModule::createPipeline(Core& core, Resolution resolution)
         pbrPass.clearTargets = true;
 
         pbrPass.shader = pbrShader;
-        GfxBufferDesc uniformBufferDesc;
-        uniformBufferDesc.size = sizeof(Data::PbrUniformData);
-        uniformBufferDesc.data = nullptr;
-        uniformBufferDesc.usage = GfxUsage::Streaming;
-        data_->pbrUniformBuf = renderer_->backend().genBuffer(uniformBufferDesc);
-        pbrPass.uniformBuffer = data_->pbrUniformBuf;
+
+        GfxBufferDesc uniformsBufferDesc;
+        uniformsBufferDesc.size = sizeof(Data::PbrUniforms);
+        uniformsBufferDesc.data = nullptr;
+        uniformsBufferDesc.usage = GfxUsage::Streaming;
+        data_->pbrUniformsBuffer = renderer_->backend().genBuffer(uniformsBufferDesc);
+        pbrPass.uniformBuffer = data_->pbrUniformsBuffer;
 
         pipeline_->passes.push_back(pbrPass);
     }
@@ -256,32 +269,12 @@ bool GfxModule::init(Core& core)
                  && createRenderer(core)
                  && createPipeline(core, initialResolution)
                  && initPipelineAndRenderer(core);
-
-    {   // FIXME TEST!!
-        static constexpr const char* testGltfName = "Debug/SuzanneColor0.glb";
-
-        Ref<Gltf> testGltf;
-        auto testGltfErr = core.g().resLoader->load<Gltf>(testGltf, testGltfName);
-        if(testGltfErr)
-        {
-            ARES_log(glog, Error, "Failed to load %s %s", testGltfName, testGltfErr);
-            return false;
-        }
-
-        data_->testMesh = testGltf->extractMesh(0U);
-        if(!data_->testMesh)
-        {
-            ARES_log(glog, Error, "Failed to extract mesh from %s", testGltfName);
-            return false;
-        }
-
-        data_->testMeshVtxBuf = backend_->genBuffer({data_->testMesh->vertexDataSize(),
-                                                     data_->testMesh->vertexData()});
-        data_->testMeshIdxBuf = backend_->genBuffer({data_->testMesh->indexDataSize(),
-                                                     data_->testMesh->indexData()});
+    if(!allOk)
+    {
+        return false;
     }
 
-    return allOk;
+    return true;
 }
 
 void GfxModule::halt(Core& core)
@@ -321,6 +314,150 @@ void GfxModule::changeResolution(Core& core, Resolution newResolution)
 }
 
 
+void GfxModule::genSceneCmds(Core& core)
+{
+    for(auto batchIt = data_->meshMap_.begin(); batchIt != data_->meshMap_.end(); batchIt ++)
+    {
+        batchIt->second.count = 0;
+        batchIt->second.modelMatrices.clear();
+    }
+
+    Scene* scene = core.g().scene;
+    for(auto it = scene->begin(); it != scene->end(); it ++)
+    {
+        auto transformComp = it->comp<TransformComp>();
+        auto meshComp = it->comp<MeshComp>();
+        if(transformComp && meshComp)
+        {
+            // Add this mesh's model matrix to the appropriate drawing batch
+            Data::MeshBatch& meshBatch = data_->meshMap_[meshComp->mesh];
+            meshBatch.count ++;
+            meshBatch.modelMatrices.push_back(transformComp->matrix());
+        }
+    }
+
+    auto& backend = renderer_->backend();
+
+    for(auto batchIt = data_->meshMap_.begin(); batchIt != data_->meshMap_.end();
+        batchIt ++)
+    {
+        if(batchIt->second.count == 0)
+        {
+            // FIXME IMPORTANT Mark batches whose `count == 0` (i.e. for meshes
+            //       that haven't been drawn even once this frame) for cleanup.
+            //       Do not delete them immediately here; delete them only when
+            //       GPU memory is getting scarce, or after a set number of frames
+            //       in which the mesh hasn't been rendered even once, or after
+            //       some other trigger happens. Deleting them immediately is much
+            //       more likely in resulting in having to reupload them a couple
+            //       of frames down the road because they are needed again!
+            continue;
+        }
+
+
+        const Mesh& mesh = *batchIt->first;
+        Data::MeshBatch& batch = batchIt->second;
+
+        if(!batch.vertexBuffer)
+        {
+            // First time we draw this Mesh, create its vertex buffer
+            GfxBufferDesc vertexBufferDesc;
+            batch.vertexBufferSize = vertexBufferDesc.size = mesh.vertexDataSize();
+            vertexBufferDesc.data = mesh.vertexData();
+            vertexBufferDesc.usage = GfxUsage::Dynamic; // FIXME: Static for StaticMeshComp, dynamic for DynamicMeshComp
+            batch.vertexBuffer = backend.genBuffer(vertexBufferDesc);
+        }
+        else if(batch.indexBufferSize != mesh.indexDataSize())
+        {
+            // Mesh's vertex data was resized, update its vertex buffer
+            batch.vertexBufferSize = mesh.vertexDataSize();
+            backend.resizeBuffer(batch.vertexBuffer, batch.vertexBufferSize);
+            backend.editBuffer(batch.vertexBuffer,
+                               0, batch.vertexBufferSize,
+                               mesh.vertexData());
+        }
+        // FIXME IMPORTANT Also check if **the contents** of the vertex data in the
+        //       Mesh have changed since last frame; if they did, update `vertexBuffer`'s
+        //       contents accordingly
+
+
+        if(mesh.indexDataSize() > 0)
+        {
+            if(!batch.indexBuffer)
+            {
+                // First time we draw this Mesh, create its index buffer
+                GfxBufferDesc indexBufferDesc;
+                batch.indexBufferSize = indexBufferDesc.size = mesh.indexDataSize();
+                indexBufferDesc.data = mesh.indexData();
+                indexBufferDesc.usage = GfxUsage::Dynamic; // FIXME: Static for StaticMeshComp, dynamic for DynamicMeshComp
+                batch.indexBuffer = backend.genBuffer(indexBufferDesc);
+            }
+            else if(batch.indexBufferSize != mesh.indexDataSize())
+            {
+                // Mesh's index data was resized, update its index buffer
+                batch.indexBufferSize = mesh.indexDataSize();
+                backend.resizeBuffer(batch.indexBuffer, batch.indexBufferSize);
+                backend.editBuffer(batch.indexBuffer,
+                                   0, batch.indexBufferSize,
+                                   mesh.indexData());
+            }
+            // FIXME IMPORTANT Also check if **the contents** of the index data in the
+            //       Mesh have changed since last frame; if they did, update `indexBuffer`'s
+            //       contents accordingly
+        }
+
+        if(!batch.instanceBuffer)
+        {
+            // First time we draw this Mesh batch, create its instance buffer
+            GfxBufferDesc instanceBufferDesc;
+            batch.instanceBufferSize = instanceBufferDesc.size
+                                     = batch.modelMatrices.size() * sizeof(glm::mat4);
+            instanceBufferDesc.data = batch.modelMatrices.data();
+            instanceBufferDesc.usage = GfxUsage::Streaming;
+            batch.instanceBuffer = renderer_->backend().genBuffer(instanceBufferDesc);
+        }
+        else
+        {
+            // Update the instance buffer, growing it if necessary
+            // If the buffer is actually bigger there is no harm (except some more
+            // memory consumption) in leaving it that size and only filling it partially
+            size_t newInstanceBufferSize = batch.modelMatrices.size() * sizeof(glm::mat4);
+            if(newInstanceBufferSize > batch.instanceBufferSize)
+            {
+                backend.resizeBuffer(batch.instanceBuffer, newInstanceBufferSize);
+                batch.instanceBufferSize = newInstanceBufferSize;
+            }
+
+            backend.editBuffer(batch.instanceBuffer,
+                               0, newInstanceBufferSize,
+                               batch.modelMatrices.data());
+        }
+
+
+        // Generate the GfxCmd to render the batch
+        // FIXME IMPORTANT Bind the correct textures gathered from Material here!
+        GfxCmd batchRenderCmd;
+        batchRenderCmd.passId = 0;
+        if(mesh.indices().size() > 0)
+        {
+            batchRenderCmd.op = GfxCmd::DrawIndexedInstanced;
+            batchRenderCmd.n = mesh.indices().size();
+        }
+        else
+        {
+            batchRenderCmd.op = GfxCmd::DrawInstanced;
+            batchRenderCmd.n = mesh.vertices().size();
+        }
+        batchRenderCmd.first = 0;
+        batchRenderCmd.nInstances = batch.count;
+        batchRenderCmd.vertexBuffer = batch.vertexBuffer;
+        batchRenderCmd.indexBuffer = batch.indexBuffer;
+        batchRenderCmd.instanceBuffer = batch.instanceBuffer;
+
+        renderer_->enqueueCmd(batchRenderCmd);
+    }
+}
+
 void GfxModule::mainUpdate(Core& core)
 {
     // Poll events for the current and/or next frame[s]
@@ -343,45 +480,41 @@ void GfxModule::mainUpdate(Core& core)
         changeResolution(core, curResolution);
     }
 
-    // Update uniform data for passes
-    renderer_->backend().editBuffer(data_->pbrUniformBuf,
-                                    0, sizeof(Data::PbrUniformData),
-                                    &data_->pbrUniformData);
-
-    {   // FIXME TEST!!
-        auto testPersp = glm::perspectiveFov(glm::radians(90.0f),
-                                             float(resolution_.width), float(resolution_.height),
-                                             1.0f, 1000.0f);
-        auto testView = glm::lookAt(glm::vec3(0.5f, 0.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                                    glm::vec3(0.0f, 1.0f, 0.0f));
-        data_->pbrUniformData.viewProjection = testPersp * testView;
-
-        GfxCmd fullscreenPassCmd;
-        fullscreenPassCmd.op = GfxCmd::Draw;
-        fullscreenPassCmd.passId = 1;
-        fullscreenPassCmd.n = 3;
-        fullscreenPassCmd.vertexBuffer = {}; // (vertices are generated in the vertex shader)
-
-        const GfxPipeline::Pass& pbrPass = pipeline_->passes[0];
-        for(unsigned int i = 0; i < pbrPass.nTargets; i ++)
-        {
-            fullscreenPassCmd.textures[i] = pbrPass.targets[0];
-        }
-        fullscreenPassCmd.nTextures = pbrPass.nTargets;
-
-        renderer_->enqueueCmd(fullscreenPassCmd);
-
-        GfxCmd testRenderCmd;
-        testRenderCmd.op = data_->testMeshIdxBuf ? GfxCmd::DrawIndexed : GfxCmd::Draw;
-        testRenderCmd.passId = 0;
-        testRenderCmd.vertexBuffer = data_->testMeshVtxBuf;
-        testRenderCmd.indexBuffer = data_->testMeshIdxBuf;
-        testRenderCmd.n = data_->testMesh->indices().size();
-        renderer_->enqueueCmd(testRenderCmd);
+    // FIXME TEST!! Test camera viewProjection matrix
+    {
+        glm::mat4 camProj = glm::perspectiveFov(glm::half_pi<float>(), // 90°
+                                                float(resolution_.width), float(resolution_.height),
+                                                0.1f, 1000.0f);
+        glm::mat4 camView = glm::lookAt(glm::vec3(5.0f), glm::vec3(0.0f),
+                                        glm::vec3(0.0f, 1.0f, 0.0f));
+        data_->pbrUniforms.camViewProj = camProj * camView;
     }
 
-    renderer_->renderFrame(resolution_);
+    // Update uniform data for passes
+    renderer_->backend().editBuffer(data_->pbrUniformsBuffer,
+                                    0, sizeof(Data::PbrUniforms),
+                                    &data_->pbrUniforms);
 
+    // Generate commands for rendering Scene data in pass 0
+    genSceneCmds(core);
+
+    // Generate the final command for outputting the final image for pass 1
+    GfxCmd ppDrawCmd;
+    ppDrawCmd.op = GfxCmd::Draw;
+    ppDrawCmd.passId = 1;
+    ppDrawCmd.n = 3; // One fullscreen triangle
+    ppDrawCmd.vertexBuffer = {}; // No vertex buffers, positions generated in vertex shader
+    const auto& pbrPass = pipeline_->passes[0];
+
+    for(unsigned int i = 0; i < pbrPass.nTargets; i ++)
+    {
+        ppDrawCmd.textures[i] = pbrPass.targets[i];
+    }
+    ppDrawCmd.nTextures = pbrPass.nTargets;
+    renderer_->enqueueCmd(ppDrawCmd);
+
+    // Sort and execute rendering commands and swap buffers
+    renderer_->renderFrame(resolution_);
     window_->endFrame();
 
     // FIXME TEST, USE A REAL EVENT SYSTEM TO TELL THE CORE TO QUIT!

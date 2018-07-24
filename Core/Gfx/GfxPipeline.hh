@@ -53,7 +53,7 @@ struct GfxPipeline
     struct Pass
     {
         /// The maximum number of `Attrib`s `attribs` can hold.
-        static constexpr const unsigned int MAX_ATTRIBS = 8;
+        static constexpr const unsigned int MAX_ATTRIBS = 16;
 
         /// The maximum number of `GfxTexture` targets `targets` can hold.
         static constexpr const unsigned int MAX_TARGETS = 8;

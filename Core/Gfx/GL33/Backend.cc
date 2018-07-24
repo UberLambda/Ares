@@ -510,6 +510,10 @@ Handle<GfxShader> Backend::genShader(const GfxShaderDesc& desc, ErrString* err)
         glUniformBlockBinding(oglProgram, uniformsIndex, 0);
     }
 
+    // Use the newly-created program to be able to call `glGetUniformLocation`,
+    // `glUniform1i` on it
+    glUseProgram(oglProgram);
+
     // Find any `u_TextureN` uniforms in the shaders and bind them to texture unit
     // `N`, for `N` in [0..MAX_TEXTURES]
     // If GLSL supported `uniform sampler2D u_Texture0 = 1` this would not be required...
@@ -526,6 +530,8 @@ Handle<GfxShader> Backend::genShader(const GfxShaderDesc& desc, ErrString* err)
             glUniform1i(textureUniformIndex, i); // Bind `u_Texture$i` to `GL_TEXTURE$i`
         }
     }
+
+    glUseProgram(0);
 
     shaders_.emplace(oglProgram);
     return Handle<GfxShader>(oglProgram);
@@ -722,6 +728,8 @@ Backend::Vao::Vao(const GfxPipeline::Pass& pass, VaoKey key)
     {
         const auto& attrib = pass.attribs[i];
 
+        glEnableVertexAttribArray(i);
+
         const GLuint* attribBuffer;
         const size_t* attribStride;
         size_t* attribOffset;
@@ -736,6 +744,8 @@ Backend::Vao::Vao(const GfxPipeline::Pass& pass, VaoKey key)
             attribBuffer = &key.instanceBuffer;
             attribStride = &instanceStride;
             attribOffset = &instanceOffset;
+
+            glVertexAttribDivisor(i, attrib.instanceDivisor);
         }
 
         if(boundBuffer != *attribBuffer)
@@ -743,7 +753,7 @@ Backend::Vao::Vao(const GfxPipeline::Pass& pass, VaoKey key)
             glBindBuffer(GL_ARRAY_BUFFER, *attribBuffer);
             boundBuffer = *attribBuffer;
         }
-        glEnableVertexAttribArray(i);
+
         glVertexAttribPointer(i,
                               attrib.n, GFX_VERTEXATTRIB_TYPE_TO_GL[unsigned(attrib.type)],
                               GL_FALSE,

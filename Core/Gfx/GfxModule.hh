@@ -16,6 +16,7 @@ class GfxRenderer; // (#include "Gfx/GfxRenderer.hh")
 class GfxModule : public Module
 {
     Window* window_; // (retrieved from `core.g().facilities` on init)
+
     Resolution resolution_;
     Ref<GfxBackend> backend_; // (initialized/destroyed by `GfxModule`)
     Ref<GfxPipeline> pipeline_; // (initialized/destroyed by `GfxModule`)
@@ -56,9 +57,14 @@ class GfxModule : public Module
     /// `renderer_`, its backend and `pipeline_` should already be created.
     bool initPipelineAndRenderer(Core& core);
 
+
     /// Executed when the resolution of `window_`'s renderable area changes; resizes
     /// all of `pipeline_`'s render targets accordingly
     void changeResolution(Core& core, Resolution newResolution);
+
+    /// Enqueue the `GfxCmd`s required to render Scene data (MeshComps, ...) for
+    /// this frame into the renderer.
+    void genSceneCmds(Core& core);
 
 public:
     GfxModule();
