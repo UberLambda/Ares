@@ -11,8 +11,8 @@ class Scene::iterator
 public:
     using iterator_category = std::input_iterator_tag;
     using value_type = EntityRef;
-    using reference = const value_type&;
-    using pointer = const value_type*;
+    using reference = value_type&;
+    using pointer = value_type*;
 
 private:
     friend class Scene;
@@ -44,6 +44,11 @@ public:
     inline reference operator*()
     {
         return ref_;
+    }
+
+    inline pointer operator->()
+    {
+        return &ref_;
     }
 
 
