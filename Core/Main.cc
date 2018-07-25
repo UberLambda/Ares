@@ -4,6 +4,7 @@
 
 #include "Visual/Window.hh"
 #include "Gfx/GfxModule.hh"
+#include "Input/InputModule.hh"
 #include "App/AppModule.hh"
 #ifndef NDEBUG
 #   include "Debug/DebugModule.hh"
@@ -43,6 +44,10 @@ static bool addCoreModulesAndFacilities()
     // GfxModule [requires Window facility]
     ARES_log(glog, Trace, "Attaching GfxModule");
     core.attachModule(intoRef<Module>(new GfxModule()));
+    nModulesAttachedHere ++;
+
+    // InputModule [requires Window facility]
+    core.attachModule(intoRef<Module>(new InputModule()));
     nModulesAttachedHere ++;
 
 #ifndef NDEBUG

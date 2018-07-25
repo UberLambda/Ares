@@ -17,7 +17,8 @@ add_executable(Ares.Core ${ARES_WIN32}
     Task/TaskScheduler.cc
     Data/FileIO.cc Data/ResourceLoader.cc
     Resource/Gltf.cc Resource/Json.cc Resource/ShaderSrc.cc
-    Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
+    Visual/Window.cc Visual/GLFW.cc
+    Input/InputMapper.cc Input/InputModule.cc
     Debug/Log.cc Debug/DebugModule.cc
     Mem/Mem.cc Mem/MallocOverrides.cc Mem/NewOverrides.cc
     Scene/Scene.cc

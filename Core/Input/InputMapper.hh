@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <Core/Api.h>
-#include <Core/Visual/Axis.hh>
+#include <Core/Input/AxisMap.hh>
 
 namespace Ares
 {
@@ -14,13 +14,13 @@ struct ARES_API InputMapping
     static constexpr const unsigned int MAX_BINDINGS = 4; ///< The maximum number of binding pairs.
 
     AxisName outputAxis; ///< The name of the output axis in the output map.
-    struct ARES_API 
+    struct ARES_API
     {
         AxisName inputAxis{"NULL"}; ///< The input axis to bind.
                                     ///  Make it "NULL" if this mapping is not to be used.
         float scale = 1.0f; ///< The factor to scale the input axis by.
 
-    } bindings[4]; ///< The (input axis, scale) bindings to the output axis.
+    } bindings[MAX_BINDINGS]; ///< The (input axis, scale) bindings to the output axis.
 
     Axis min = -1.0f; /// < The floor value to clamp the output to.
     Axis max = 1.0f; /// < The ceiling value to clamp the output to.

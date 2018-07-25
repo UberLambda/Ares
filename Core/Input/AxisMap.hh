@@ -4,15 +4,10 @@
 #include <unordered_map>
 #include <Core/Api.h>
 #include <Core/Base/KeyString.hh>
+#include <Core/Input/Axis.hh>
 
 namespace Ares
 {
-
-/// A virtual axis, i.e. a floating point value that changes according to input.
-using Axis = float;
-
-/// A name to identify a particular input `Axis`.
-using AxisName = KeyString<16>;
 
 /// A mapping of `Axis` names to their values.
 class ARES_API AxisMap

@@ -460,10 +460,7 @@ void GfxModule::genSceneCmds(Core& core)
 
 void GfxModule::mainUpdate(Core& core)
 {
-    // Poll events for the current and/or next frame[s]
-    // TODO: Move input polling somewhere else so that even if the rendering isof `pipeline_`'s render targets accordingly
-    //       lagging rendering won't suffer
-    window_->pollEvents();
+    // NOTE: Window events (incl. resizing!) are polled by `InputModule`
 
     // Execute rendering commands calculate for the previous frame
     // NOTE: *THIS IS ALWAYS ONE FRAME BEHIND!*
