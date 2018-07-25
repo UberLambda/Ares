@@ -3,13 +3,14 @@
 #include <stddef.h>
 #include <atomic>
 #include <utility>
+#include <Core/Api.h>
 
 namespace Ares
 {
 
 /// An heap-allocated array of atomic `T`s.
 template <typename T>
-class AtomicArray
+class ARES_API AtomicArray
 {
 public:
     /// Each item of the array, that contains an atomic `T`.

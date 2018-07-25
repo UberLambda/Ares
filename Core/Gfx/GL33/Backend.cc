@@ -1,8 +1,8 @@
 #include "Backend.hh"
 
 #include <sstream>
-#include "Shader.hh"
-#include "Texture.hh"
+#include <Core/Gfx/GL33/Shader.hh>
+#include <Core/Gfx/GL33/Texture.hh>
 
 namespace Ares
 {

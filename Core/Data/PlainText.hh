@@ -1,7 +1,8 @@
 #pragma once
 
 #include <string>
-#include "ResourceParser.hh"
+#include <Core/Api.h>
+#include <Core/Data/ResourceParser.hh>
 
 namespace Ares
 {
@@ -11,7 +12,7 @@ using PlainText = std::string;
 
 
 template <>
-struct ResourceParser<PlainText>
+struct ARES_API ResourceParser<PlainText>
 {
     static ErrString parse(PlainText& outResource, std::istream& stream, const char* ext,
                            ResourceLoader& loader)

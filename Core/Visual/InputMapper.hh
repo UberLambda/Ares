@@ -1,19 +1,20 @@
 #pragma once
 
 #include <vector>
-#include "Axis.hh"
+#include <Core/Api.h>
+#include <Core/Visual/Axis.hh>
 
 namespace Ares
 {
 
 /// A mapping from a series of (input axis, scale) binding pair to
 /// an output axis. See `InputMapper`.
-struct InputMapping
+struct ARES_API InputMapping
 {
     static constexpr const unsigned int MAX_BINDINGS = 4; ///< The maximum number of binding pairs.
 
     AxisName outputAxis; ///< The name of the output axis in the output map.
-    struct
+    struct ARES_API 
     {
         AxisName inputAxis{"NULL"}; ///< The input axis to bind.
                                     ///  Make it "NULL" if this mapping is not to be used.
@@ -29,7 +30,7 @@ struct InputMapping
 /// Each output `Axis` is calculated as `clamp((inputAxis1 * scale1) + (inputAxis2 * scale2)
 /// + ... + (inputAxisN * scaleN)), min, max)` depending on the `n` (inputAxis, scale) binding
 /// pairs found in the mapper's `InputMapping`s.
-class InputMapper
+class ARES_API InputMapper
 {
 public:
     /// An editable list of input mappings.

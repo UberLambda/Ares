@@ -1,8 +1,8 @@
 #include "ShaderSrc.hh"
 
 #include <sstream>
-#include "Json.hh"
-#include "../Data/ResourceLoader.hh"
+#include <Core/Resource/Json.hh>
+#include <Core/Data/ResourceLoader.hh>
 
 namespace Ares
 {

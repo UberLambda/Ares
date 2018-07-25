@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <utility>
 #include <boost_context/fcontext.h>
-#include "../Base/NumTypes.hh"
+#include <Core/Base/NumTypes.hh>
 
 // Based on the fiber implementation in https://github.com/RichieSams/FiberTaskingLib (Apache2 license)
 // License of FiberTaskingLib is contained in "3rdparty/boost_context_ftl/LICENSE.md"

@@ -5,8 +5,9 @@
 #include <typeinfo>
 #include <typeindex>
 #include <mutex>
-#include "EntityId.hh"
-#include "CompStore.hh"
+#include <Core/Api.h>
+#include <Core/Scene/EntityId.hh>
+#include <Core/Scene/CompStore.hh>
 
 namespace Ares
 {
@@ -14,7 +15,7 @@ namespace Ares
 class EntityRef; // #include "EntityRef.hh"
 
 /// A collection of entities and the components associated to them.
-class Scene
+class ARES_API Scene
 {
     friend class EntityRef;
 

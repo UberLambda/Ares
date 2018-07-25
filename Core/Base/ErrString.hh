@@ -3,12 +3,13 @@
 #include <string>
 #include <utility>
 #include <ostream>
+#include <Core/Api.h>
 
 namespace Ares
 {
 
 /// A string used to store an optional error message.
-class ErrString
+class ARES_API ErrString
 {
     std::string str_;
 

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <stddef.h>
-#include "../Base/NumTypes.hh"
+#include <Core/Api.h>
+#include <Core/Base/NumTypes.hh>
 
 namespace Ares
 {
@@ -9,7 +10,7 @@ namespace Ares
 /// A numeric handle for a `T` resource.
 /// Handles with id 0 are "null handles", i.e. pointing to no resource.
 template <typename T>
-struct Handle
+struct ARES_API Handle
 {
     U32 id;
 
@@ -44,7 +45,7 @@ namespace std
 {
 
 template <typename T>
-class hash<Ares::Handle<T>>
+class ARES_API hash<Ares::Handle<T>>
 {
 public:
     inline size_t operator()(const Ares::Handle<T>& value) const

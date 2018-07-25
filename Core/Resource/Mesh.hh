@@ -4,16 +4,17 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <Core/Api.h>
 
 namespace Ares
 {
 
 /// An indexed triangle mesh.
-class Mesh
+class ARES_API Mesh
 {
 public:
     /// A vertex of the mesh. See GLTF 2.0's per-vertex attributes.
-    struct Vertex
+    struct ARES_API Vertex
     {
         glm::vec3 position;
         glm::vec3 normal;

@@ -4,14 +4,14 @@
 #include <unordered_map>
 #include <vector>
 #include <concurrentqueue.h>
-#include "../Base/MapTree.hh"
-#include "../Base/Handle.hh"
-#include "../Base/Ref.hh"
-#include "../Visual/Resolution.hh"
-#include "GfxResources.hh"
-#include "GfxCmd.hh"
-#include "GfxPipeline.hh"
-#include "GfxBackend.hh"
+#include <Core/Base/MapTree.hh>
+#include <Core/Base/Handle.hh>
+#include <Core/Base/Ref.hh>
+#include <Core/Visual/Resolution.hh>
+#include <Core/Gfx/GfxResources.hh>
+#include <Core/Gfx/GfxCmd.hh>
+#include <Core/Gfx/GfxPipeline.hh>
+#include <Core/Gfx/GfxBackend.hh>
 
 namespace Ares
 {

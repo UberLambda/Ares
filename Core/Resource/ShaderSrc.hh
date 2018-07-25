@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../Data/ResourceParser.hh"
+#include <Core/Api.h>
+#include <Core/Data/ResourceParser.hh>
 #include <string>
 
 namespace Ares
@@ -8,7 +9,7 @@ namespace Ares
 
 /// The source code of a shader program.
 /// Source code is always in GLSL 330 core syntax.
-struct ShaderSrc
+struct ARES_API ShaderSrc
 {
     /// The source code of the vertex shader.
     /// Leave empty if unused.
@@ -34,7 +35,7 @@ struct ShaderSrc
 
 /// Implementation of `ResourceParser` for `ShaderSrc`s.
 template <>
-struct ResourceParser<ShaderSrc>
+struct ARES_API ResourceParser<ShaderSrc>
 {
     static ErrString parse(ShaderSrc& outSrc, std::istream& stream, const Path& path,
                            ResourceLoader& loader);

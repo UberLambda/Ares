@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../Data/ResourceParser.hh"
+#include <Core/Api.h>
+#include <Core/Data/ResourceParser.hh>
 #include <json.hpp>
 
 namespace Ares
@@ -11,7 +12,7 @@ using Json = nlohmann::json;
 
 /// Implementation of `ResourceParser` for `Json`s.
 template <>
-struct ResourceParser<Json>
+struct ARES_API ResourceParser<Json>
 {
     static ErrString parse(Json& outJson, std::istream& stream,
                            const Path& path, ResourceLoader& loader);

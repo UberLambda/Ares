@@ -1,13 +1,14 @@
 #pragma once
 
-#include "../Module/Module.hh"
-#include "Dll.hh"
+#include <Core/Api.h>
+#include <Core/Module/Module.hh>
+#include <Core/App/Dll.hh>
 
 namespace Ares
 {
 
 /// A `Module` loaded from a external shared library, containing application-specific code.
-class AppModule : public Module
+class ARES_API AppModule : public Module
 {
 public:
     /// The type of the function in the loaded shared library that returns the

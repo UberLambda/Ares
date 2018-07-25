@@ -1,7 +1,7 @@
 #include "Scene.hh"
 
-#include "EntityRef.hh"
-#include "SceneIterator.hh"
+#include <Core/Scene/EntityRef.hh>
+#include <Core/Scene/SceneIterator.hh>
 
 namespace Ares
 {

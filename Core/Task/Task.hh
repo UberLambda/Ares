@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Core/Api.h>
+
 namespace Ares
 {
 
@@ -9,7 +11,7 @@ class TaskScheduler;
 using TaskFunc = void(*)(TaskScheduler* scheduler, void* data);
 
 /// An atomic task to execute.
-struct Task
+struct ARES_API Task
 {
     TaskFunc func = nullptr; ///< The function to be run when the task is run.
     void* data = nullptr; ///< Some data to pass to `func`.

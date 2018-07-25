@@ -1,15 +1,16 @@
 #pragma once
 
 #include <utility>
-#include "EntityId.hh"
-#include "Scene.hh"
+#include <Core/Api.h>
+#include <Core/Scene/EntityId.hh>
+#include <Core/Scene/Scene.hh>
 
 namespace Ares
 {
 
 /// A reference to an entity inside of a scene.
 /// **WARNING**: Only valid up to the parent scene's destruction!
-class EntityRef
+class ARES_API EntityRef
 {
     friend class Scene;
 

@@ -10,8 +10,8 @@
 #include <assert.h>
 
 #include "Globals.hh"
-#include "../../Base/Platform.h"
-#include "../../Base/Utils.hh"
+#include <Core/Base/Platform.h>
+#include <Core/Base/Utils.hh>
 
 // Attribute of a function that is to be run when an executable/shared library is loaded
 // **WARNING**: place it inbetween the return type and the function name!

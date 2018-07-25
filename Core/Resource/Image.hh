@@ -5,7 +5,8 @@
 #include <utility>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
-#include "../Visual/Resolution.hh"
+#include <Core/Api.h>
+#include <Core/Visual/Resolution.hh>
 
 namespace Ares
 {
@@ -14,7 +15,7 @@ namespace Ares
 /// Rows of pixels are stored contiguously in memory, with the top-left pixel
 /// being at (0, 0).
 template <typename Pixel>
-class Image
+class ARES_API Image
 {
     std::vector<Pixel> data_;
     Resolution resolution_;

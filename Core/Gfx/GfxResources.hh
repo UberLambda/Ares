@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../Base/Handle.hh"
-#include "../Base/Ref.hh"
-#include "../Resource/ShaderSrc.hh"
-#include "../Visual/Resolution.hh"
-#include "../Visual/Resolution.hh"
-#include "ImageFormat.hh"
+#include <Core/Base/Handle.hh>
+#include <Core/Base/Ref.hh>
+#include <Core/Resource/ShaderSrc.hh>
+#include <Core/Visual/Resolution.hh>
+#include <Core/Visual/Resolution.hh>
+#include <Core/Gfx/ImageFormat.hh>
 
 namespace Ares
 {

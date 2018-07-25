@@ -1,7 +1,7 @@
 #include "../MemFuncs.hh"
 
 #include <assert.h>
-#include "../../Base/Platform.h"
+#include <Core/Base/Platform.h>
 #include "Globals.hh"
 
 namespace Ares

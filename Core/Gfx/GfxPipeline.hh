@@ -1,10 +1,10 @@
 #pragma once
 
 #include <vector>
-#include "../Base/NumTypes.hh"
-#include "../Base/Handle.hh"
-#include "GfxResources.hh"
-#include "GfxCmd.hh"
+#include <Core/Base/NumTypes.hh>
+#include <Core/Base/Handle.hh>
+#include <Core/Gfx/GfxResources.hh>
+#include <Core/Gfx/GfxCmd.hh>
 
 namespace Ares
 {

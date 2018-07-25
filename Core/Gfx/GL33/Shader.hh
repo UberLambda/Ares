@@ -1,7 +1,7 @@
 #pragma once
 
 #include <flextGL.h>
-#include "../../Base/ErrString.hh"
+#include <Core/Base/ErrString.hh>
 
 namespace Ares
 {

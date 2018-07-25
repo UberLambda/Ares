@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <flextGL.h>
-#include "../Visual/Resolution.hh"
+#include <Core/Visual/Resolution.hh>
 
 namespace Ares
 {

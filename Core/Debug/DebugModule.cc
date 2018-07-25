@@ -1,7 +1,7 @@
 #include "DebugModule.hh"
 
-#include "../Core.hh"
-#include "Log.hh"
+#include <Core/Core.hh>
+#include <Core/Debug/Log.hh>
 
 namespace Ares
 {

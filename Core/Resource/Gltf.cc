@@ -3,9 +3,9 @@
 #include <stddef.h>
 #include <string.h>
 #include <unordered_map>
-#include "../Base/NumTypes.hh"
-#include "../Data/ResourceLoader.hh"
-#include "../Data/Path.hh"
+#include <Core/Base/NumTypes.hh>
+#include <Core/Data/ResourceLoader.hh>
+#include <Core/Data/Path.hh>
 
 namespace Ares
 {

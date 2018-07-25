@@ -2,8 +2,9 @@
 
 #include <stddef.h>
 #include <assert.h>
-#include "AtomicArray.hh"
-#include "NumTypes.hh"
+#include <Core/Api.h>
+#include <Core/Base/AtomicArray.hh>
+#include <Core/Base/NumTypes.hh>
 
 namespace Ares
 {
@@ -11,7 +12,7 @@ namespace Ares
 /// An pool of `T`s where grabbing/freeing a `T` from the pool is a thread-safe
 /// atomic operation.
 template <typename T>
-class AtomicPool
+class ARES_API AtomicPool
 {
     size_t INVALID_INDEX = -1;
 

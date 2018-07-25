@@ -1,12 +1,13 @@
 #pragma once
 
-#include "Resolution.hh"
+#include <Core/Api.h>
+#include <Core/Visual/Resolution.hh>
 
 namespace Ares
 {
 
 /// A video mode for rendering.
-struct VideoMode
+struct ARES_API VideoMode
 {
     /// The fullscreen mode for a certain video mode.
     enum FullscreenMode

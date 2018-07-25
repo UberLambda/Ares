@@ -1,4 +1,4 @@
-#include "../MemFuncs.hh"
+#include <Core/Mem/MemFuncs.hh>
 
 #include <rpmalloc/rpmalloc.h>
 #include "Globals.hh"

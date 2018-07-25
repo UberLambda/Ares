@@ -1,15 +1,16 @@
 #pragma once
 
-#include "../Base/Ref.hh"
-#include "../Resource/Image.hh"
-#include "../Visual/Color.hh"
+#include <Core/Api.h>
+#include <Core/Base/Ref.hh>
+#include <Core/Resource/Image.hh>
+#include <Core/Visual/Color.hh>
 
 namespace Ares
 {
 
 /// A gfx material.
 /// Based on GLTF 2.0's PBR metallic-roughness materials.
-struct Material
+struct ARES_API Material
 {
     /// A linear albedo (base color) for the material, including alpha.
     RGBAF albedoFac{1.0f, 1.0f, 1.0f, 1.0f};

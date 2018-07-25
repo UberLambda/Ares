@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../Data/Path.hh"
+#include <Core/Data/Path.hh>
 
-#include "../Base/Platform.h"
+#include <Core/Base/Platform.h>
 #ifdef ARES_PLATFORM_IS_WINDOWS
 #   define WIN32_LEAN_AND_MEAN
 #   include <windows.h>

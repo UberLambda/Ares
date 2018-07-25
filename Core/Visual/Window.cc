@@ -2,8 +2,8 @@
 
 #include <assert.h>
 #include <utility>
-#include "../Base/Utils.hh"
-#include "../Base/NumTypes.hh"
+#include <Core/Base/Utils.hh>
+#include <Core/Base/NumTypes.hh>
 
 // =============================================================================
 // == GLFW 3.x Window implementation: for Windows, POSIX, Mac OS              ==

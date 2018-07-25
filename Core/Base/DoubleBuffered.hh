@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <utility>
+#include <Core/Api.h>
 
 namespace Ares
 {
@@ -9,7 +10,7 @@ namespace Ares
 /// A holder for two `T`s that can be swapped to pingpong (doublebuffer)
 /// between them.
 template <typename T>
-class DoubleBuffered
+class ARES_API DoubleBuffered
 {
     T items_[2];
     int which_;

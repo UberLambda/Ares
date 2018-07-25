@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Axis.hh"
+#include <Core/Visual/Axis.hh>
 #include <vulkan/vulkan.h>
 #include <flextGL.h>
 #define GLFW_INCLUDE_NONE

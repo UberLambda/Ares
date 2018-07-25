@@ -5,8 +5,9 @@
 #include <vector>
 #include <concurrentqueue.h>
 #include <tinyformat.h>
-#include "../Base/AtomicPool.hh"
-#include "../Base/MemStreambuf.hh"
+#include <Core/Api.h>
+#include <Core/Base/AtomicPool.hh>
+#include <Core/Base/MemStreambuf.hh>
 
 namespace Ares
 {
@@ -39,7 +40,7 @@ enum LogLevel
 };
 
 /// A message to be logged in a `Log`.
-struct LogMessage
+struct ARES_API LogMessage
 {
     /// The maximum size in bytes of the contents of the message.
     /// This includes the null terminator.
@@ -66,7 +67,7 @@ struct LogMessage
 using LogSink = void(*)(const LogMessage* message, void* data);
 
 /// A stream of `LogMessage`s.
-class Log
+class ARES_API Log
 {
     AtomicPool<LogMessage> messagePool_;
     moodycamel::ConcurrentQueue<LogMessage*> messagesToFlush_;

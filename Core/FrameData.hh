@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Api.h"
 #include "Event/EventMatrix.hh"
 
 namespace Ares
@@ -14,7 +15,7 @@ namespace Ares
 /// time/in any order during a frame - displaying/receiving events from a
 /// consistent, readonly "past" frame data, and pushing new events at will on the
 /// read/write "current" frame data.
-struct FrameData
+struct ARES_API FrameData
 {
     /// The event matrix for events that happened this frame.
     ///

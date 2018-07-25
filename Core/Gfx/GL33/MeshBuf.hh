@@ -1,7 +1,7 @@
 #pragma once
 
 #include <flextGL.h>
-#include "../Resource/Mesh.hh"
+#include <Core/Resource/Mesh.hh>
 
 namespace Ares
 {

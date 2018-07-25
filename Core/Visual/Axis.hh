@@ -2,7 +2,8 @@
 
 #include <utility>
 #include <unordered_map>
-#include "../Base/KeyString.hh"
+#include <Core/Api.h>
+#include <Core/Base/KeyString.hh>
 
 namespace Ares
 {
@@ -14,7 +15,7 @@ using Axis = float;
 using AxisName = KeyString<16>;
 
 /// A mapping of `Axis` names to their values.
-class AxisMap
+class ARES_API AxisMap
 {
     std::unordered_map<AxisName, Axis> map_;
 

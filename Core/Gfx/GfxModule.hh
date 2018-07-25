@@ -1,10 +1,11 @@
 #pragma once
 
-#include "../Base/Ref.hh"
-#include "../Module/Module.hh"
-#include "../Visual/Resolution.hh"
-#include "GfxBackend.hh"
-#include "GfxPipeline.hh"
+#include <Core/Api.h>
+#include <Core/Base/Ref.hh>
+#include <Core/Module/Module.hh>
+#include <Core/Visual/Resolution.hh>
+#include <Core/Gfx/GfxBackend.hh>
+#include <Core/Gfx/GfxPipeline.hh>
 
 namespace Ares
 {
@@ -13,7 +14,7 @@ class Window; // (#include "../Visual/Window.hh")
 class GfxRenderer; // (#include "Gfx/GfxRenderer.hh")
 
 /// A graphics + graphical input module.
-class GfxModule : public Module
+class ARES_API GfxModule : public Module
 {
     Window* window_; // (retrieved from `core.g().facilities` on init)
 

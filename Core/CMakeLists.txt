@@ -16,7 +16,7 @@ add_executable(Ares.Core ${ARES_WIN32}
     Main.cc Core.cc
     Task/TaskScheduler.cc
     Data/FileIO.cc Data/ResourceLoader.cc
-    Resource/Gltf.cc Resource/Config.cc Resource/Json.cc Resource/ShaderSrc.cc
+    Resource/Gltf.cc Resource/Json.cc Resource/ShaderSrc.cc
     Visual/Window.cc Visual/GLFW.cc Visual/InputMapper.cc
     Debug/Log.cc Debug/DebugModule.cc
     Mem/Mem.cc Mem/MallocOverrides.cc Mem/NewOverrides.cc
@@ -32,7 +32,9 @@ set_target_properties(Ares.Core PROPERTIES
     CXX_STANDARD 14
 
     ENABLE_EXPORTS ON # So that App.so/App.dll can link to Ares' executable
+    DEFINE_SYMBOL "ARES_EXPORTS"
 )
+target_include_directories(Ares.Core PUBLIC ${PROJECT_SOURCE_DIR}) # So that you can #include <Core/...>
 
 option(ARES_STRIP_EXECUTABLE "Strip Ares executables in release build" ON)
 if(ARES_STRIP_EXECUTABLE)

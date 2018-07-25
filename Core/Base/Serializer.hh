@@ -2,6 +2,7 @@
 
 #include <istream>
 #include <ostream>
+#include <Core/Api.h>
 #include <Ares/BuildConfig.h>
 
 namespace Ares
@@ -12,7 +13,7 @@ namespace Ares
 ///
 /// Serialized values must be in big endian.
 template <typename T>
-struct Serializer
+struct ARES_API Serializer
 {
     /// Attempts to serialize a `T` to a stream; returns `false` on error.
     static bool serialize(const T& value, std::ostream& stream);

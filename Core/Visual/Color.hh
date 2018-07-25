@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Base/NumTypes.hh"
+#include <Core/Base/NumTypes.hh>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 

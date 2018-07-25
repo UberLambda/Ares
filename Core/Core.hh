@@ -4,6 +4,7 @@
 #include <atomic>
 #include <vector>
 #include <utility>
+#include "Api.h"
 #include "Base/DoubleBuffered.hh"
 #include "Base/Ref.hh"
 #include "Module/Module.hh"
@@ -18,7 +19,7 @@ namespace Ares
 /// The core contains a list of modules.
 /// Modules get updated each frame and can use or register new core facilities
 /// to perform their functions.
-class Core
+class ARES_API Core
 {
     /// The current state of a `Core`.
     enum State

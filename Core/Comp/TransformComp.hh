@@ -5,12 +5,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/euler_angles.hpp>
+#include <Core/Api.h>
 
 namespace Ares
 {
 
 /// The transform of a 3D entity.
-struct TransformComp
+struct ARES_API TransformComp
 {
     /// The position of the entity in the scene.
     glm::vec3 position{0.0f, 0.0f, 0.0f};

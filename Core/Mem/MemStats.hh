@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Core/Api.h>
 #include <stddef.h>
 
 namespace Ares
@@ -8,7 +9,7 @@ namespace Ares
 /// Statistics about memory usage.
 /// Not all statistics are implemented for all mem backends. Unimplemented fields'
 /// values are always zero.
-struct MemStats
+struct ARES_API MemStats
 {
     /// The current number of memory allocations.
     unsigned int nAllocs = 0;
@@ -24,9 +25,9 @@ struct MemStats
 };
 
 /// Updates, then returns current statistics about program-wide (global) memory [de]allocations.
-const MemStats& memStats();
+const MemStats& ARES_API memStats();
 
 /// Returns the name of the library used for `malloc()/free()`.
-const char* memBackendName();
+const char* ARES_API memBackendName();
 
 }

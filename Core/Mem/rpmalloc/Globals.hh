@@ -6,7 +6,7 @@
 #include <pthread.h>
 
 #include <atomic>
-#include "../MemStats.hh"
+#include <Core/Mem/MemStats.hh>
 
 namespace Ares
 {

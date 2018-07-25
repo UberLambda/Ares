@@ -3,10 +3,11 @@
 #include <string.h>
 #define TINYGLTF_NO_FS
 #include <tiny_gltf.h>
-#include "../Base/Ref.hh"
-#include "../Data/ResourceParser.hh"
-#include "../Data/PlainText.hh"
-#include "Mesh.hh"
+#include <Core/Api.h>
+#include <Core/Base/Ref.hh>
+#include <Core/Data/ResourceParser.hh>
+#include <Core/Data/PlainText.hh>
+#include <Core/Resource/Mesh.hh>
 
 namespace Ares
 {
@@ -14,7 +15,7 @@ namespace Ares
 /// A GLTF 2.0 file.
 /// .gltf/.glb files can contain meshes, textures, animations, materials,
 /// and/or entire scene graphs.
-class Gltf
+class ARES_API Gltf
 {
     tinygltf::Model model_;
 
@@ -62,7 +63,7 @@ public:
 
 /// Implementation of `ResourceParser` for `Gltf`s.
 template <>
-struct ResourceParser<Gltf>
+struct ARES_API ResourceParser<Gltf>
 {
     static ErrString parse(Gltf& outGltf, std::istream& stream, const Path& path,
                            ResourceLoader& loader);

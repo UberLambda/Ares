@@ -1,15 +1,16 @@
 #pragma once
 
-#include "../Base/Ref.hh"
-#include "../Resource/Mesh.hh"
-#include "../Resource/Material.hh"
+#include <Core/Api.h>
+#include <Core/Base/Ref.hh>
+#include <Core/Resource/Mesh.hh>
+#include <Core/Resource/Material.hh>
 
 namespace Ares
 {
 
 /// A triangle mesh attached to an entity for rendering.
 /// The mesh's origin will match the entity's.
-struct MeshComp
+struct ARES_API MeshComp
 {
     /// A reference to the mesh's data.
     Ref<Mesh> mesh;

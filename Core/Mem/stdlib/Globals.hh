@@ -3,7 +3,7 @@
 // Global variables defined to use in this mem backend
 
 #include <atomic>
-#include "../MemStats.hh"
+#include <Core/Mem/MemStats.hh>
 
 namespace Ares
 {

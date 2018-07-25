@@ -5,16 +5,17 @@
 #include <vector>
 #include <sstream>
 #include <unordered_map>
-#include "../Base/Ref.hh"
-#include "../Base/TypeMap.hh"
-#include "FileStore.hh"
-#include "ResourceParser.hh"
+#include <Core/Api.h>
+#include <Core/Base/Ref.hh>
+#include <Core/Base/TypeMap.hh>
+#include <Core/Data/FileStore.hh>
+#include <Core/Data/ResourceParser.hh>
 
 namespace Ares
 {
 
 /// A loader of resources.
-class ResourceLoader
+class ARES_API ResourceLoader
 {
     struct ResourceStoreBase
     {

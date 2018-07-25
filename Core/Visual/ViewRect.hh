@@ -1,7 +1,8 @@
 #pragma once
 
 #include <glm/vec2.hpp>
-#include "Resolution.hh"
+#include <Core/Api.h>
+#include <Core/Visual/Resolution.hh>
 
 namespace Ares
 {
@@ -14,7 +15,7 @@ namespace Ares
 /// |      |
 /// v------+
 /// +Y
-struct ViewRect
+struct ARES_API ViewRect
 {
     /// The top-left corner of the rectangle, relative to the screen's origin.
     glm::tvec2<size_t> topLeft;
@@ -42,7 +43,7 @@ struct ViewRect
     }
 };
 
-inline std::ostream& operator<<(std::ostream& stream, const ViewRect& viewRect)
+inline std::ostream& ARES_API operator<<(std::ostream& stream, const ViewRect& viewRect)
 {
     stream << viewRect.resolution() << '+' << viewRect.topLeft.x << ',' << viewRect.topLeft.y;
     return stream;

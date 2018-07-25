@@ -1,8 +1,8 @@
 #include "AppModule.hh"
 
 #include <assert.h>
-#include "../Core.hh"
-#include "../Debug/Log.hh"
+#include <Core/Core.hh>
+#include <Core/Debug/Log.hh>
 
 namespace Ares
 {

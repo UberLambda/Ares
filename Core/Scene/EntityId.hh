@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Base/NumTypes.hh"
+#include <Core/Base/NumTypes.hh>
 
 namespace Ares
 {

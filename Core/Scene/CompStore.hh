@@ -4,8 +4,9 @@
 #include <vector>
 #include <utility>
 #include <iterator>
-#include "../Base/Utils.hh"
-#include "EntityId.hh"
+#include <Core/Api.h>
+#include <Core/Base/Utils.hh>
+#include <Core/Scene/EntityId.hh>
 
 namespace Ares
 {
@@ -28,7 +29,7 @@ public:
 /// A sparse collection of `T` components indexed by `Entity`.
 /// Supports iteration.
 template <typename T>
-class CompStore : public CompStoreBase
+class ARES_API CompStore : public CompStoreBase
 {
     size_t maxEntities_;
     std::vector<bool> compMap_; // (note: specialized in the STL)
@@ -129,7 +130,7 @@ public:
     }
 
 
-    class iterator
+    class ARES_API iterator
     {
     public:
         using iterator_category = std::input_iterator_tag;

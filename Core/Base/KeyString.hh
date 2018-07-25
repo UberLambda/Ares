@@ -3,7 +3,8 @@
 #include <stddef.h>
 #include <string.h>
 #include <utility>
-#include "NumTypes.hh"
+#include <Core/Api.h>
+#include <Core/Base/NumTypes.hh>
 
 namespace Ares
 {
@@ -11,7 +12,7 @@ namespace Ares
 /// A hashed string of a fixed `size`.
 /// Useful to be used as a key for hash maps.
 template <size_t size>
-class KeyString
+class ARES_API KeyString
 {
     char str_[size] = {'\0'};
     U64 hash_ = 0;
@@ -103,7 +104,7 @@ namespace std
 {
 
 template <size_t size>
-struct hash<Ares::KeyString<size>>
+struct ARES_API hash<Ares::KeyString<size>>
 {
     inline size_t operator()(const Ares::KeyString<size>& value) const
     {

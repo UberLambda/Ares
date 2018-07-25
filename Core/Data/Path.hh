@@ -1,12 +1,13 @@
 #pragma once
 
 #include <string>
+#include <Core/Api.h>
 
 namespace Ares
 {
 
 /// A path to a resource file, relative to the `FileStore`'s root.
-class Path
+class ARES_API Path
 {
     friend std::ostream& operator<<(std::ostream& stream, const Path& path);
 
@@ -148,7 +149,7 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& stream, const Path& path)
+inline std::ostream& ARES_API operator<<(std::ostream& stream, const Path& path)
 {
     stream << path.path_;
     return stream;
@@ -161,7 +162,7 @@ namespace std
 {
 
 template <>
-struct hash<Ares::Path>
+struct ARES_API hash<Ares::Path>
 {
     inline size_t operator()(const Ares::Path& value) const
     {

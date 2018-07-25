@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../Base/Handle.hh"
-#include "../Base/NumTypes.hh"
-#include "GfxResources.hh"
+#include <Core/Base/Handle.hh>
+#include <Core/Base/NumTypes.hh>
+#include <Core/Gfx/GfxResources.hh>
 
 namespace Ares
 {

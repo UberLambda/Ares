@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <utility>
-#include "../Base/NumTypes.hh"
+#include <Core/Base/NumTypes.hh>
 
 namespace Ares
 {

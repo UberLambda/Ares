@@ -4,21 +4,21 @@
 #include <unordered_map>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#include "../Core.hh"
-#include "../Debug/Log.hh"
-#include "../Data/ResourceLoader.hh"
-#include "../Visual/Window.hh"
-#include "../Resource/Mesh.hh"
-#include "../Scene/Scene.hh"
-#include "../Scene/SceneIterator.hh"
-#include "../Comp/TransformComp.hh"
-#include "../Comp/MeshComp.hh"
-#include "GfxRenderer.hh"
-#include "GfxBackend.hh"
+#include <Core/Core.hh>
+#include <Core/Debug/Log.hh>
+#include <Core/Data/ResourceLoader.hh>
+#include <Core/Visual/Window.hh>
+#include <Core/Resource/Mesh.hh>
+#include <Core/Scene/Scene.hh>
+#include <Core/Scene/SceneIterator.hh>
+#include <Core/Comp/TransformComp.hh>
+#include <Core/Comp/MeshComp.hh>
+#include <Core/Gfx/GfxRenderer.hh>
+#include <Core/Gfx/GfxBackend.hh>
 
 // OpenGL 3.3 core backend
 #include <flextGL.h>
-#include "GL33/Backend.hh"
+#include <Core/Gfx/GL33/Backend.hh>
 
 namespace Ares
 {

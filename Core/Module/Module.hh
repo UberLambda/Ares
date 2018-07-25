@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../Task/Task.hh"
+#include <Core/Api.h>
+#include <Core/Task/Task.hh>
 
 namespace Ares
 {
@@ -8,7 +9,7 @@ namespace Ares
 struct Core; // (#include "Core.hh")
 
 /// The interface of engine core modules.
-class Module
+class ARES_API Module
 {
 public:
     virtual ~Module() = default;

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stddef.h>
-#include "../Base/NumTypes.hh"
-#include "../Task/TaskScheduler.hh"
+#include <Core/Base/NumTypes.hh>
+#include <Core/Task/TaskScheduler.hh>
 
 namespace Ares
 {

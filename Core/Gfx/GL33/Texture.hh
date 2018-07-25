@@ -1,10 +1,10 @@
 #pragma once
 
 #include <flextGL.h>
-#include "../../../Base/ErrString.hh"
-#include "../../../Base/NumTypes.hh"
-#include "../../Visual/Resolution.hh"
-#include "../ImageFormat.hh"
+#include <Core/Base/ErrString.hh>
+#include <Core/Base/NumTypes.hh>
+#include <Core/Visual/Resolution.hh>
+#include <Core/Gfx/ImageFormat.hh>
 
 namespace Ares
 {

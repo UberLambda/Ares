@@ -1,12 +1,13 @@
 #pragma once
 
-#include "../Module/Module.hh"
+#include <Core/Api.h>
+#include <Core/Module/Module.hh>
 
 namespace Ares
 {
 
 /// A module used for gathering/displaying debug data.
-class DebugModule : public Module
+class ARES_API DebugModule : public Module
 {
 public:
     DebugModule();

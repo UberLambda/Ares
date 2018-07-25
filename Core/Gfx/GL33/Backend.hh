@@ -3,8 +3,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <flextGL.h>
-#include "../GfxBackend.hh"
-#include "../Base/KeyString.hh"
+#include <Core/Gfx/GfxBackend.hh>
+#include <Core/Base/KeyString.hh>
 
 namespace Ares
 {

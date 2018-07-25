@@ -1,12 +1,13 @@
 #pragma once
 
-#include "Scene.hh"
-#include "EntityRef.hh"
+#include <Core/Api.h>
+#include <Core/Scene/Scene.hh>
+#include <Core/Scene/EntityRef.hh>
 
 namespace Ares
 {
 
-class Scene::iterator
+class ARES_API Scene::iterator
 {
 public:
     using iterator_category = std::input_iterator_tag;

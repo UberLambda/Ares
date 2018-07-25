@@ -3,13 +3,14 @@
 #include <assert.h>
 #include <stddef.h>
 #include <atomic>
-#include "../Base/NumTypes.hh"
+#include <Core/Api.h>
+#include <Core/Base/NumTypes.hh>
 
 namespace Ares
 {
 
 /// The interface that all `EventQueue<T>`s implement.
-class EventQueueBase
+class ARES_API EventQueueBase
 {
 public:
     virtual ~EventQueueBase() = default;
@@ -99,7 +100,7 @@ public:
 
 
     /// A readonly iterator over a `EventQueue<T>`.
-    class const_iterator
+    class ARES_API const_iterator
     {
     public:
         using iterator_category = std::input_iterator_tag;

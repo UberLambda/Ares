@@ -2,8 +2,8 @@
 
 #include <string>
 #include <vulkan/vulkan.h>
-#include "VideoMode.hh"
-#include "Axis.hh"
+#include <Core/Visual/VideoMode.hh>
+#include <Core/Visual/Axis.hh>
 
 namespace Ares
 {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include "Api.h"
 #include "Base/TypeMap.hh"
 
 namespace Ares
@@ -20,7 +21,7 @@ class ResourceLoader; // (#include "Data/ResourceLoader.hh")
 /// time/in any order during a frame - displaying/receiving events from a
 /// consistent, readonly "past" frame data, and pushing new events at will on the
 /// read/write "current" frame data.
-struct GlobalData
+struct ARES_API GlobalData
 {
     /// The main engine log.
     Log* log;

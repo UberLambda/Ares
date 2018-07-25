@@ -5,6 +5,7 @@
 #include <atomic>
 #include <mutex>
 #include <type_traits>
+#include <Core/Api.h>
 
 namespace Ares
 {
@@ -12,7 +13,7 @@ namespace Ares
 /// A reference-counted container for a `T`.
 /// Similiar to a thread-safe + lockless `std::shared_ptr`.
 template <typename T>
-class Ref
+class ARES_API Ref
 {
     template <typename U, typename... TArgs>
     friend Ref<U> makeRef(TArgs&&... tArgs);
@@ -299,7 +300,7 @@ public:
 /// to `T`'s constructor.
 /// Threadsafe and lockless.
 template <typename T, typename... TArgs>
-inline Ref<T> makeRef(TArgs&&... tArgs)
+inline Ref<T> ARES_API makeRef(TArgs&&... tArgs)
 {
     using Ref = Ref<T>;
     using RefData = typename Ref::Data;
@@ -316,7 +317,7 @@ inline Ref<T> makeRef(TArgs&&... tArgs)
 ///              use `get()` on the returned ref instead.
 /// Threadsafe and lockless.
 template <typename T>
-inline Ref<T> intoRef(T* t)
+inline Ref<T> ARES_API intoRef(T* t)
 {
     // Abstract type: replace the `T*` in the `ref.data_: THeapBox`
     using Ref = Ref<T>;
@@ -333,7 +334,7 @@ namespace std
 {
 
 template <typename T>
-class hash<Ares::Ref<T>>
+class ARES_API hash<Ares::Ref<T>>
 {
 public:
     inline size_t operator()(const Ares::Ref<T>& value) const

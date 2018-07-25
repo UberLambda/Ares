@@ -1,6 +1,6 @@
 #include "Texture.hh"
 
-#include "../Base/MapTree.hh"
+#include <Core/Base/MapTree.hh>
 
 namespace Ares
 {

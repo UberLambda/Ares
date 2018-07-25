@@ -4,13 +4,14 @@
 #include <typeindex>
 #include <utility>
 #include <memory>
+#include <Core/Api.h>
 
 namespace Ares
 {
 
 /// A map of `typeid(T) -> T`s, i.e. mapping a type id to a value of that type.
 /// NOTE: Requires RTTI.
-class TypeMap
+class ARES_API TypeMap
 {
     struct SlotBase
     {
@@ -129,7 +130,7 @@ public:
 
     /// A readonly iterator over pairs in the `EventQueue<T>`.
     /// Pointers to `T`s are retrieved as `void*`.
-    class const_iterator
+    class ARES_API const_iterator
     {
     public:
         using iterator_category = std::input_iterator_tag;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <istream>
-#include "Path.hh"
+#include <Core/Data/Path.hh>
 
 namespace Ares
 {

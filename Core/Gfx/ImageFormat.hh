@@ -1,14 +1,15 @@
 #pragma once
 
 #include <ostream>
-#include "../Base/NumTypes.hh"
+#include <Core/Api.h>
+#include <Core/Base/NumTypes.hh>
 
 namespace Ares
 {
 
 /// The format of each pixel in an image. This is composed by 4 `ChannelFormats`
 /// (msB to lsB: r, g, b, a). See `ImageFormat::isValid()` for extra restrictions.
-struct ImageFormat
+struct ARES_API ImageFormat
 {
     /// The format of an `ImageFormat`'s channel.
     enum class Channel : U8

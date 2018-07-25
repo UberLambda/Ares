@@ -5,12 +5,13 @@
 #include <atomic>
 #include <thread>
 #include <list>
-#include "Task.hh"
-#include "TaskVar.hh"
-#include "Fiber.hh"
-#include "FiberStackStore.hh"
-#include "../Base/AtomicPool.hh"
-#include "../Base/NumTypes.hh"
+#include <Core/Api.h>
+#include <Core/Task/Task.hh>
+#include <Core/Task/TaskVar.hh>
+#include <Core/Task/Fiber.hh>
+#include <Core/Task/FiberStackStore.hh>
+#include <Core/Base/AtomicPool.hh>
+#include <Core/Base/NumTypes.hh>
 
 namespace Ares
 {
@@ -21,7 +22,7 @@ namespace Ares
 ///
 /// Based on the GDC talk "Parallelizing the Naughty Dog engine using fibers"
 /// and inspired by the implementation of task_scheduler in FiberTaskingLib
-class TaskScheduler
+class ARES_API TaskScheduler
 {
     // A returned index that means "invalid".
     static constexpr const size_t INVALID_INDEX = -1;

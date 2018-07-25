@@ -1,13 +1,14 @@
 #pragma once
 
-#include "../Base/TypeMap.hh"
-#include "EventQueue.hh"
+#include <Core/Api.h>
+#include <Core/Base/TypeMap.hh>
+#include <Core/Event/EventQueue.hh>
 
 namespace Ares
 {
 
 /// A collection of `EventQueue`s of types.
-class EventMatrix
+class ARES_API EventMatrix
 {
     TypeMap matrix_;
 

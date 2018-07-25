@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <utility>
+#include <Core/Api.h>
 
 namespace Ares
 {
@@ -13,7 +14,7 @@ namespace Ares
 /// can have any amount of child nodes.
 /// Can be indexed by (`T`, `T`, ...) sequences to retrieve the `U` value.
 template <typename T, typename U>
-class MapTree
+class ARES_API MapTree
 {
 public:
     // FIXME `static constexpr const size_t INVALID = -1;` triggers an "undefined reference" error,

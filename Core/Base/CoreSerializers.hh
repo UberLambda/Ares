@@ -3,10 +3,10 @@
 #include <string>
 #include <type_traits>
 #include <Ares/BuildConfig.h>
-#include "NumTypes.hh"
-#include "LinTypes.hh"
-#include "KeyString.hh"
-#include "Utils.hh"
+#include <Core/Base/NumTypes.hh>
+#include <Core/Base/LinTypes.hh>
+#include <Core/Base/KeyString.hh>
+#include <Core/Base/Utils.hh>
 
 // === Serializers for core types, that are mostly easy to serialize ===========
 

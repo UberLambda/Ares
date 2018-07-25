@@ -1,12 +1,12 @@
 #pragma once
 
 #include <stddef.h>
-#include "../Base/Ref.hh"
-#include "../Base/ErrString.hh"
-#include "../Visual/ViewCube.hh"
-#include "GfxResources.hh"
-#include "GfxPipeline.hh"
-#include "GfxCmd.hh"
+#include <Core/Base/Ref.hh>
+#include <Core/Base/ErrString.hh>
+#include <Core/Visual/ViewCube.hh>
+#include <Core/Gfx/GfxResources.hh>
+#include <Core/Gfx/GfxPipeline.hh>
+#include <Core/Gfx/GfxCmd.hh>
 
 namespace Ares
 {

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <glm/vec3.hpp>
-#include "Resolution.hh"
+#include <Core/Api.h>
+#include <Core/Visual/Resolution.hh>
 
 namespace Ares
 {
@@ -17,7 +18,7 @@ namespace Ares
 ///   \|      \|
 ///    v-------+
 ///    +Y
-struct ViewCube
+struct ARES_API ViewCube
 {
     /// The top-front-left corner of the rectangle, relative to the screen's origin.
     glm::tvec3<size_t> topFrontLeft;
@@ -56,7 +57,7 @@ struct ViewCube
     }
 };
 
-inline std::ostream& operator<<(std::ostream& stream, const ViewCube& viewCube)
+inline std::ostream& ARES_API operator<<(std::ostream& stream, const ViewCube& viewCube)
 {
     const glm::uvec3& tfl = viewCube.topFrontLeft;
     stream << viewCube.xyResolution(); stream << 'x'; stream << viewCube.zDepth();

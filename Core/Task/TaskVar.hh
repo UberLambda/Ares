@@ -1,7 +1,7 @@
 #pragma once
 
 #include <atomic>
-#include "../Base/NumTypes.hh"
+#include <Core/Base/NumTypes.hh>
 
 namespace Ares
 {

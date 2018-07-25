@@ -2,12 +2,13 @@
 
 #include <stddef.h>
 #include <ostream>
+#include <Core/Api.h>
 
 namespace Ares
 {
 
 /// The resolution of a raster image.
-struct Resolution
+struct ARES_API Resolution
 {
     size_t width = 0, height = 0;
 
@@ -23,7 +24,7 @@ struct Resolution
     }
 };
 
-inline std::ostream& operator<<(std::ostream& stream, const Resolution& resolution)
+inline std::ostream& ARES_API operator<<(std::ostream& stream, const Resolution& resolution)
 {
     stream << resolution.width << 'x' << resolution.height;
     return stream;
