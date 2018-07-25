@@ -41,7 +41,7 @@ if(ARES_STRIP_EXECUTABLE)
 
         set(STRIP_COMMAND strip)
         if(NOT "${CMAKE_CXX_COMPILER_TARGET}" STREQUAL "")
-            set(STRIP_COMMAND "${CMAKE_CXX_COMPILE_TARGET}-${STRIP_EXECUTABLE}")
+            set(STRIP_COMMAND "${CMAKE_CXX_COMPILER_TARGET}-${STRIP_COMMAND}")
         endif()
         add_custom_command(TARGET Ares.Core POST_BUILD
                            COMMAND ${STRIP_COMMAND} "$<TARGET_FILE:Ares.Core>")
