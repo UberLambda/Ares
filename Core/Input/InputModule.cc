@@ -39,6 +39,31 @@ bool InputModule::init(Core& core)
         inputMapper_ = core.g().facilities.get<InputMapper>();
     }
 
+    // Add some default mappings to the mapper
+    // TODO Load these from a config file
+    // TODO IMPORTANT Add joystick axis mappings
+    {
+        // FIXME ALL OF X, Y, Z MAPPINGS ARE INVERTED
+        auto& mappings = inputMapper_->mappings();
+
+        mappings.push_back({"P1.Pos.X",
+                            {{"Key.A", -1.0f}, {"Key.D", 1.0f}}
+                           });
+        mappings.push_back({"P1.Pos.Y",
+                            {{"Key.LControl", -1.0f}, {"Key.Space", 1.0f}}
+                           });
+        mappings.push_back({"P1.Pos.Z",
+                            {{"Key.W", -1.0f}, {"Key.S", 1.0f}}
+                           });
+
+        mappings.push_back({"P1.Cam.X",
+                            {{"Mouse.dY", -0.5f}}  // Cam X => Mouse -dY rescaled to [-1..1]
+                           });
+        mappings.push_back({"P1.Cam.Y",
+                            {{"Mouse.dX", -0.5f}} // Cam Y => Mouse -dX rescaled to [-1..1]
+                           });
+    }
+
     return true;
 }
 
