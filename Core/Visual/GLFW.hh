@@ -47,9 +47,10 @@ public:
 };
 
 /// Updates core axes in `axisMap` according to the inputs read from the given
-/// GLFW window as of the latest `glfwPollEvents()` call. `mouseScroll{X,Y}` have
-/// to be supplied manually since there is (atleast at the moment) no way to poll
-/// for their values - a callback has to be setup instead.
-void updateGLFWAxisMap(GLFWwindow* window, AxisMap& axisMap, double mouseScrollX, double mouseScrollY);
+/// GLFW window as of the latest `glfwPollEvents()` call.
+/// `mouseScroll{X,Y}` have to be supplied manually since there is (atleast at
+/// the moment) no way to poll for their values - a callback has to be setup instead.
+void updateGLFWAxisMap(GLFWwindow* window, AxisMap& axisMap,
+                       double mouseScrollX, double mouseScrollY);
 
 }

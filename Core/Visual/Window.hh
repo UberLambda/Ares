@@ -21,6 +21,14 @@ public:
         VK11, ///< Vulkan 1.1
     };
 
+    /// The input mode.
+    enum InputMode
+    {
+        NormalInput, ///< Normal input. Cursor is shown, its position is bounded to the screen.
+        HiddenInput, ///< Same as `Normal` but cursor is hidden.
+        FpsInput, ///< FPS input. Cursor is hidden, its position is unbounded.
+    };
+
 private:
     struct Impl;
     Impl* impl_;
@@ -87,11 +95,25 @@ public:
     // FIXME IMPLEMENT A way to check `target.refreshRate`
     // FIXME IMPLEMENT An interface to list native video modes supported by the system
 
-    /// Gets or sets the Window's title.
+    /// Gets the current input mode.
+    /// **ASSERTS**: `operator bool()`
+    /// **WARNING** if GLFW: Needs to be called from the main thread!
+    InputMode inputMode() const;
+
+    /// Changes the Window's input mode to `newMode`.
+    /// **ASSERTS**: `operator bool()`
+    /// **WARNING** if GLFW: Needs to be called from the main thread!
+    Window& changeInputMode(InputMode newMode);
+
+    /// Gets the Window's title.
     /// **ASSERTS**: `operator bool()`
     /// **WARNING** if GLFW: Setter needs to be called from the main thread!
     const std::string& title() const;
-    Window& title(const std::string& newTitle);
+
+    /// Changes the Window's title.
+    /// **ASSERTS**: `operator bool()`
+    /// **WARNING** if GLFW: Needs to be called from the main thread!
+    Window& changeTitle(const std::string& newTitle);
 
 
     /// Attempts to query the Vulkan instance extensions required to make the

@@ -29,6 +29,7 @@ struct Window::Impl
 
     GLFWwindow* window;
     std::string windowTitle;
+    InputMode inputMode;
     double mouseScrollX, mouseScrollY;
 };
 
@@ -109,7 +110,7 @@ Window::Window(Api api, VideoMode videoMode, const std::string& title)
     // FIXME IMPLEMENT initialize Vulkan here
 
     this->changeVideoMode(videoMode);
-    this->title(title);
+    this->changeTitle(title);
 }
 
 Window::~Window()
@@ -175,9 +176,10 @@ const std::string& Window::title() const
     return impl_->windowTitle;
 }
 
-Window& Window::title(const std::string& newTitle)
+Window& Window::changeTitle(const std::string& newTitle)
 {
-    assert(operator bool() && "Uninitialized Window");
+    ARES_windowAssertOk();
+
     impl_->windowTitle = newTitle;
     glfwSetWindowTitle(impl_->window, impl_->windowTitle.c_str());
     return *this;
@@ -240,6 +242,36 @@ Window& Window::changeVideoMode(VideoMode target)
     // default: unimplemented
     }
 
+    return *this;
+}
+
+Window::InputMode Window::inputMode() const
+{
+    return impl_->inputMode;
+}
+
+Window& Window::changeInputMode(Window::InputMode newMode)
+{
+    ARES_windowAssertOk();
+
+    int glfwInputMode;
+    switch(newMode)
+    {
+        case Window::HiddenInput:
+            glfwInputMode = GLFW_CURSOR_HIDDEN;
+        break;
+
+        case Window::FpsInput:
+            glfwInputMode = GLFW_CURSOR_DISABLED;
+        break;
+
+        default:
+            glfwInputMode = GLFW_CURSOR_NORMAL;
+        break;
+    }
+    glfwSetInputMode(impl_->window, GLFW_CURSOR, glfwInputMode);
+
+    impl_->inputMode = newMode;
     return *this;
 }
 
