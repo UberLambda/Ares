@@ -13,6 +13,7 @@
 #include <Core/Scene/SceneIterator.hh>
 #include <Core/Comp/TransformComp.hh>
 #include <Core/Comp/MeshComp.hh>
+#include <Core/Comp/CameraComp.hh>
 #include <Core/Gfx/GfxRenderer.hh>
 #include <Core/Gfx/GfxBackend.hh>
 
@@ -32,6 +33,10 @@ struct GfxModule::Data
     } pbrUniforms;
     Handle<GfxBuffer> pbrUniformsBuffer;
 
+    CameraComp camComp; ///< The active camera
+    glm::vec3 camPos; ///< The position of the active camera
+    glm::vec3 camRot; ///< The rotation of the active camera
+
     struct MeshBatch
     {
         size_t count;
@@ -39,7 +44,7 @@ struct GfxModule::Data
         Handle<GfxBuffer> vertexBuffer = {}, indexBuffer = {}, instanceBuffer = {};
         size_t vertexBufferSize = 0, indexBufferSize = 0, instanceBufferSize = 0;
     };
-    std::unordered_map<Ref<Mesh>, MeshBatch> meshMap_;
+    std::unordered_map<Ref<Mesh>, MeshBatch> meshMap;
 };
 
 
@@ -314,9 +319,9 @@ void GfxModule::changeResolution(Core& core, Resolution newResolution)
 }
 
 
-void GfxModule::genSceneCmds(Core& core)
+void GfxModule::updateSceneData(Core& core)
 {
-    for(auto batchIt = data_->meshMap_.begin(); batchIt != data_->meshMap_.end(); batchIt ++)
+    for(auto batchIt = data_->meshMap.begin(); batchIt != data_->meshMap.end(); batchIt ++)
     {
         batchIt->second.count = 0;
         batchIt->second.modelMatrices.clear();
@@ -326,19 +331,60 @@ void GfxModule::genSceneCmds(Core& core)
     for(auto it = scene->begin(); it != scene->end(); it ++)
     {
         auto transformComp = it->comp<TransformComp>();
+        if(!transformComp)
+        {
+            // No transform = can't be a renderable or camera
+            // TODO Default-init to pos=(0, 0, 0) rot=(0, 0, 0) scale=(1, 1, 1) instead?
+            continue;
+        }
+
         auto meshComp = it->comp<MeshComp>();
-        if(transformComp && meshComp)
+        if(meshComp)
         {
             // Add this mesh's model matrix to the appropriate drawing batch
-            Data::MeshBatch& meshBatch = data_->meshMap_[meshComp->mesh];
+            Data::MeshBatch& meshBatch = data_->meshMap[meshComp->mesh];
             meshBatch.count ++;
             meshBatch.modelMatrices.push_back(transformComp->matrix());
+        }
+
+        auto cameraComp = it->comp<CameraComp>();
+        if(cameraComp && data_->camComp.priority >= cameraComp->priority)
+        {
+            // Found a camera with same or higher priority, replace the current one
+            // NOTE Comparison is `>=` so that the default, uninitialized
+            //      `data_->cameraComp` gets replaced by the first camera that
+            //      we find, even if it has default priority.
+            data_->camComp = *cameraComp;
+            data_->camPos = transformComp->position;
+            data_->camRot = transformComp->rotation;
         }
     }
 
     auto& backend = renderer_->backend();
 
-    for(auto batchIt = data_->meshMap_.begin(); batchIt != data_->meshMap_.end();
+    // Update uniforms for pass 0 before rendering
+    {
+        float aspectRatio = float(resolution_.width) / float(resolution_.height);
+
+        // NOTE **Camera view transforms are inverted**; if the camera is at X=20,
+        //      its transform must translate by X=-20!
+        auto camR = glm::eulerAngleXYZ(-data_->camRot.x, -data_->camRot.y, -data_->camRot.z);
+        auto camT = glm::translate(glm::mat4(1.0f), -data_->camPos);
+        auto camView = camR * camT;
+
+        // FIXME Check which camera to (`camera.perspective`, `camera....`) to
+        //       use depending on `data_->camera.type`
+        auto camProjection = data_->camComp.perspective.projectionMatrix(aspectRatio);
+
+        data_->pbrUniforms.camViewProj = camProjection * camView;
+
+
+        backend.editBuffer(data_->pbrUniformsBuffer,
+                           0, sizeof(data_->pbrUniforms), &data_->pbrUniforms);
+    }
+
+
+    for(auto batchIt = data_->meshMap.begin(); batchIt != data_->meshMap.end();
         batchIt ++)
     {
         if(batchIt->second.count == 0)
@@ -477,23 +523,8 @@ void GfxModule::mainUpdate(Core& core)
         changeResolution(core, curResolution);
     }
 
-    // FIXME TEST!! Test camera viewProjection matrix
-    {
-        glm::mat4 camProj = glm::perspectiveFov(glm::half_pi<float>(), // 90°
-                                                float(resolution_.width), float(resolution_.height),
-                                                0.1f, 1000.0f);
-        glm::mat4 camView = glm::lookAt(glm::vec3(5.0f), glm::vec3(0.0f),
-                                        glm::vec3(0.0f, 1.0f, 0.0f));
-        data_->pbrUniforms.camViewProj = camProj * camView;
-    }
-
-    // Update uniform data for passes
-    renderer_->backend().editBuffer(data_->pbrUniformsBuffer,
-                                    0, sizeof(Data::PbrUniforms),
-                                    &data_->pbrUniforms);
-
-    // Generate commands for rendering Scene data in pass 0
-    genSceneCmds(core);
+    // Generate commands and uniform data for rendering Scene data in pass 0
+    updateSceneData(core);
 
     // Generate the final command for outputting the final image for pass 1
     GfxCmd ppDrawCmd;

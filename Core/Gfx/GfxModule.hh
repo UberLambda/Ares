@@ -65,7 +65,7 @@ class ARES_API GfxModule : public Module
 
     /// Enqueue the `GfxCmd`s required to render Scene data (MeshComps, ...) for
     /// this frame into the renderer.
-    void genSceneCmds(Core& core);
+    void updateSceneData(Core& core);
 
 public:
     GfxModule();
