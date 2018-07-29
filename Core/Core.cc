@@ -123,7 +123,7 @@ bool Core::init()
     // ResourceLoader (and its FileStore)
     {
         // FIXME Switchable `fileStore` implementation depending on use
-        auto folderFileStore = new FolderFileStore(".");
+        auto folderFileStore = new FolderFileStore("Resources");
         Ref<FileStore> fileStore = intoRef<FileStore>(folderFileStore);
 
         ARES_log(glog, Debug,
