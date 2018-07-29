@@ -11,7 +11,7 @@ namespace Ares
 
 
 /// A rendering and input context.
-class Window
+class ARES_API Window
 {
 public:
     /// The graphics API to use.
