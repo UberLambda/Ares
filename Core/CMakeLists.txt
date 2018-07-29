@@ -100,6 +100,15 @@ if(BUILD_TYPE MATCHES RELEASE|RELWITHDEBINFO)
     )
 endif()
 
+# #define ARES_SRCDIR_PATH_LENGTH; See: https://stackoverflow.com/a/40947954 and Debug/Log/Log.hh
+# **WARNING** Make sure that CMake has been invoked with the full path to the
+#             source code; if relative paths are used,
+#             length(${PROJECT_SOURCE_DIR}/srcfile.cc) != length(__FILE__),
+#             **potentially making `ARES_FILE_` in Debug/Log.hh point to garbage
+#             data over the end of the __FILE__ string!!**
+string(LENGTH "${PROJECT_SOURCE_DIR}/" SRCDIR_PATH_LENGTH)
+target_compile_options(Ares.Core PRIVATE -DARES_SRCDIR_PATH_LENGTH=${SRCDIR_PATH_LENGTH})
+
 # ===== BuildConfig.h.in =======================================================
 
 include(TestBigEndian)

@@ -183,11 +183,21 @@ public:
     void flush(size_t count=-1);
 };
 
+
+// Default value, to be replaced via CMake for each project using Log.hh; See `ARES_FILE_`
+#ifndef ARES_SRCDIR_PATH_LENGTH
+#   define ARES_SRCDIR_PATH_LENGTH 0
+#endif
+
+/// A shortened __FILE__, obtained by skipping `ARES_SRCDIR_PATH_LENGTH` characters from it
+/// See: https://stackoverflow.com/a/40947954 and Debug/Log/Log.hh and Core/CMakeLists.txt
+#define ARES_FILE_ (__FILE__ + ARES_SRCDIR_PATH_LENGTH)
+
 /// A convenience macro that `log()`s a [un]formatted message coming from the
 /// current file and line to a `Log`.
 /// Example: `ARES_log(myLog, Info, "Could not find %s", "shrubberies")` in
 ///           Main.cc at line 9 would expand to `myLog.log(Info, "Main.cc", 9,
 ///           "Could not find %s", "shrubberies")`.
-#define ARES_log(log_, level, ...) (log_).log((level), __FILE__, __LINE__, __VA_ARGS__)
+#define ARES_log(log_, level, ...) (log_).log((level), ARES_FILE_, __LINE__, __VA_ARGS__)
 
 }
