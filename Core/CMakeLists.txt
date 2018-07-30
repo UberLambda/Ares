@@ -71,6 +71,7 @@ target_link_libraries(Ares.Core PUBLIC
     tinyformat
     tinygltf
     plthook
+    bullet
 )
 
 if(TARGET rpmalloc)
