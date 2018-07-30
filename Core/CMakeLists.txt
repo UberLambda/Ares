@@ -24,6 +24,7 @@ add_executable(Ares.Core ${ARES_WIN32}
     Scene/Scene.cc
     Gfx/GfxModule.cc Gfx/GfxRenderer.cc Gfx/GfxPipeline.cc
     Gfx/GL33/Shader.cc Gfx/GL33/GBuffer.cc Gfx/GL33/MeshBuf.cc Gfx/GL33/Texture.cc Gfx/GL33/Backend.cc
+    Phys/PhysModule.cc
     App/AppModule.cc
 )
 set_target_properties(Ares.Core PROPERTIES

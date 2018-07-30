@@ -5,6 +5,7 @@
 #include "Visual/Window.hh"
 #include "Gfx/GfxModule.hh"
 #include "Input/InputModule.hh"
+#include "Phys/PhysModule.hh"
 #include "App/AppModule.hh"
 #ifndef NDEBUG
 #   include "Debug/DebugModule.hh"
@@ -48,6 +49,10 @@ static bool addCoreModulesAndFacilities()
 
     // InputModule [requires Window facility]
     core.attachModule(intoRef<Module>(new InputModule()));
+    nModulesAttachedHere ++;
+
+    // PhysModule
+    core.attachModule(intoRef<Module>(new PhysModule()));
     nModulesAttachedHere ++;
 
 #ifndef NDEBUG
