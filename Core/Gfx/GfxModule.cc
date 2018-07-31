@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
 #include <Core/Core.hh>
 #include <Core/Debug/Log.hh>
 #include <Core/Data/ResourceLoader.hh>
@@ -35,7 +37,7 @@ struct GfxModule::Data
 
     CameraComp camComp; ///< The active camera
     glm::vec3 camPos; ///< The position of the active camera
-    glm::vec3 camRot; ///< The rotation of the active camera
+    glm::quat camRot; ///< The rotation of the active camera
 
     struct MeshBatch
     {
@@ -368,7 +370,7 @@ void GfxModule::updateSceneData(Core& core)
 
         // NOTE **Camera view transforms are inverted**; if the camera is at X=20,
         //      its transform must translate by X=-20!
-        auto camR = glm::eulerAngleXYZ(-data_->camRot.x, -data_->camRot.y, -data_->camRot.z);
+        auto camR = glm::toMat4(glm::inverse(data_->camRot));
         auto camT = glm::translate(glm::mat4(1.0f), -data_->camPos);
         auto camView = camR * camT;
 
