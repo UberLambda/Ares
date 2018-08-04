@@ -114,3 +114,63 @@ find_package(Bullet REQUIRED 3)
 add_library(bullet INTERFACE)
 target_include_directories(bullet INTERFACE ${BULLET_INCLUDE_DIRS})
 target_link_libraries(bullet INTERFACE ${BULLET_LIBRARIES})
+
+# == libuv
+# == Upstream: https://github.com/libuv/libuv [imported via find script]
+# == License: MIT
+find_package(Libuv REQUIRED)
+add_library(libuv INTERFACE)
+target_include_directories(libuv INTERFACE ${LIBUV_INCLUDE_DIR})
+target_link_libraries(libuv INTERFACE ${LIBUV_LIBRARIES})
+
+# == OpenSSL
+# == Upstream: https://www.openssl.org [imported via find script[
+# == License: OpenSSL
+find_package(OpenSSL REQUIRED)
+add_library(openssl INTERFACE)
+target_include_directories(openssl INTERFACE ${OPENSSL_INCLUDE_DIR})
+target_link_libraries(openssl INTERFACE ${OPENSSL_LIBRARIES})
+
+# == zlib
+# == Upstream: https://github.com/madler/zlib [in-tree]
+# == License: zlib (duh)
+add_subdirectory(zlib/)
+
+# == uWebSockets
+# == Upstream: https://github.com/uNetworking/uWebSockets [in-tree]
+# == License: zlib
+# == Requires: libuv, openssl, zlib
+add_library(uwebsockets STATIC
+    uWebSockets/src/Epoll.cpp
+    uWebSockets/src/Extensions.cpp
+    uWebSockets/src/Group.cpp
+    uWebSockets/src/HTTPSocket.cpp
+    uWebSockets/src/Hub.cpp
+    uWebSockets/src/Networking.cpp
+    uWebSockets/src/Node.cpp
+    uWebSockets/src/Socket.cpp
+    uWebSockets/src/WebSocket.cpp
+)
+target_include_directories(uwebsockets PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/uWebSockets/src/"
+)
+target_link_libraries(uwebsockets PUBLIC
+    libuv
+    openssl
+    zlib
+    #ws2_32 - already linked in by libuv
+)
+
+# Force uWebSockets to use libuv as backend on all platforms
+# Doesn't hurt since `Ares::Core::run()` services libuv's default loop anyways
+target_compile_definitions(uwebsockets PUBLIC -DUSE_LIBUV=1)
+
+if(WIN32)
+    # `inet_ntop()` is in WinSock2 only from Windows Vista and later; set
+    # WINVER=0x501 to require Windows 7 or greater
+    # Could be circumvented, see https://memset.wordpress.com/2010/10/09/inet_ntop-for-win32/
+    target_compile_definitions(uwebsockets PUBLIC
+        -DWINVER=0x601
+        -D_WIN32_WINNT=0x601
+    )
+endif()

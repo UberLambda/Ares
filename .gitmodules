@@ -16,3 +16,9 @@
 [submodule "Core/3rdparty/tinygltf"]
 	path = Core/3rdparty/tinygltf
 	url = https://github.com/syoyo/tinygltf
+[submodule "Core/3rdparty/uWebSockets"]
+	path = Core/3rdparty/uWebSockets
+	url = https://github.com/uNetworking/uWebSockets
+[submodule "Core/3rdparty/zlib"]
+	path = Core/3rdparty/zlib
+	url = https://github.com/madler/zlib

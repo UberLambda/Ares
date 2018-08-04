@@ -73,6 +73,10 @@ target_link_libraries(Ares.Core PUBLIC
     tinygltf
     plthook
     bullet
+    libuv
+    zlib
+    openssl
+    uwebsockets
 )
 
 if(TARGET rpmalloc)
