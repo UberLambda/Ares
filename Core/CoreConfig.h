@@ -3,6 +3,9 @@
 /// The capacity of a `Core` `Log`'s message pool.
 #define ARES_CORE_LOG_MESSAGE_POOL_CAPACITY 1024
 
+/// The address to bind the profiler's output TCP socket to.
+#define ARES_CORE_PROFILER_ADDRESS "localhost:4242"
+
 /// The capacity of a `Core` `TaskScheduler`'s fiber pool.
 #define ARES_CORE_SCHEDULER_FIBER_POOL_CAPACITY 256
 

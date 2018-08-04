@@ -1,14 +1,17 @@
 #include "Core.hh"
 
 #include <algorithm>
+#include <Ares/BuildConfig.h>
+#include "CoreConfig.h"
 #include "Debug/Log.hh"
+#include "Debug/Profiler.hh"
+#include "Debug/TimeProbe.hh"
 #include "Task/TaskScheduler.hh"
 #include "Scene/Scene.hh"
 #include "Data/FolderFileStore.hh"
 #include "Data/ResourceLoader.hh"
 #include "Mem/MemStats.hh"
 #include "Module/Module.hh"
-#include "CoreConfig.h"
 
 namespace Ares
 {
@@ -47,6 +50,7 @@ Core::~Core()
     delete g().resLoader;
     delete g().scene;
     delete g().scheduler;
+    delete g().profiler;
     delete g().log;
 
     // `~DoubleBuffer<FrameData>()` will free everything else
@@ -85,6 +89,28 @@ bool Core::init()
 
         // FIXME
     }
+
+    // Profiler
+    {
+        g().profiler = new Profiler();
+
+#ifdef ARES_ENABLE_PROFILER
+        auto err = g().profiler->connect(ARES_CORE_PROFILER_ADDRESS);
+        if(err)
+        {
+            ARES_log(glog, Error, "Failed to enable profiling on %s: %s",
+                     ARES_CORE_PROFILER_ADDRESS, err);
+        }
+        else
+        {
+            ARES_log(glog, Debug, "Profiling enabled on %s",
+                     ARES_CORE_PROFILER_ADDRESS);
+        }
+#else
+        ARES_log(glog, Debug, "Profiling disabled");
+#endif
+    }
+
 
     ARES_log(glog, Info, "Init");
 
@@ -168,46 +194,61 @@ bool Core::run()
     TaskVar frameVar{0};
     while(state_ == Running)
     {
-        // Schedule the update tasks for each module that can run on worker
-        // threads; use `frameVar` as counter
-        for(auto& module : modules_)
         {
-            Task updateTask = module->updateTask(*this);
-            if(updateTask)
+            TimeProbe timer(*g().profiler, "core.mainLoop");
+
+            // Schedule the update tasks for each module that can run on worker
+            // threads; use `frameVar` as counter
             {
-                g().scheduler->schedule(updateTask, &frameVar);
+                TimeProbe timer(*g().profiler, "Core.MainLoop.UpdateTasks");
+
+                for(auto& module : modules_)
+                {
+                    Task updateTask = module->updateTask(*this);
+                    if(updateTask)
+                    {
+                        g().scheduler->schedule(updateTask, &frameVar);
+                    }
+                }
             }
+
+            // Update everything that has to be updated on the main thread for each
+            // module; in the meantime, the worker tasks scheduled earlier are being
+            // executed in the background...
+            for(auto& module : modules_)
+            {
+                module->mainUpdate(*this);
+            }
+
+            // TODO: Do main thread stuff that HAS to be done once per frame here
+            // (core file I/O, ...)
+
+            // Flush a bunch of this frame's log messages here.
+            // This amount of messages to be flushed should be enough to make sure
+            // that the message buffer is always empty afterwards (so that we don't
+            // run out of log messages in the log's message pool...)
+            glog.flush(ARES_CORE_LOG_MESSAGE_POOL_CAPACITY);
+
+            // Wait for all module update tasks to finish...
+            {
+                TimeProbe timer(*g().profiler, "Core.MainLoop.Idle");
+
+                while(frameVar.load() != 0)
+                {
+                    // TODO: Do something more useful, don't just spinlock
+                }
+            }
+
+            // Clear the previous frame's data and swap current and previous frame
+            // data. Events/commands that were in `current()` will now be in `past()`
+            // for the next frame, ready to be processed; `current()` will be blank,
+            // ready to be filled with new data.
+            frameData_.past().clear();
+            frameData_.swap();
         }
 
-        // Update everything that has to be updated on the main thread for each
-        // module; in the meantime, the worker tasks scheduled earlier are being
-        // executed in the background...
-        for(auto& module : modules_)
-        {
-            module->mainUpdate(*this);
-        }
-
-        // TODO: Do main thread stuff that HAS to be done once per frame here
-        // (core file I/O, ...)
-
-        // Flush a bunch of this frame's log messages here.
-        // This amount of messages to be flushed should be enough to make sure
-        // that the message buffer is always empty afterwards (so that we don't
-        // run out of log messages in the log's message pool...)
-        glog.flush(ARES_CORE_LOG_MESSAGE_POOL_CAPACITY);
-
-        // Wait for all module update tasks to finish...
-        while(frameVar.load() != 0)
-        {
-            // TODO: Do something more useful, don't just spinlock
-        }
-
-        // Clear the previous frame's data and swap current and previous frame
-        // data. Events/commands that were in `current()` will now be in `past()`
-        // for the next frame, ready to be processed; `current()` will be blank,
-        // ready to be filled with new data.
-        frameData_.past().clear();
-        frameData_.swap();
+        // Flush the profiler. Does nothing `#ifndef ARES_ENABLE_PROFILER`
+        g().profiler->flush();
     }
 
     ARES_log(glog, Info, "Done running");

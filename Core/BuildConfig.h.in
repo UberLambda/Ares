@@ -6,3 +6,6 @@
 // `ARES_HAS_[X]`: Ares was linked to library [X]?
 #cmakedefine ARES_HAS_RPMALLOC
 #cmakedefine ARES_HAS_PTHREADS
+
+// `ARES_ENABLE_[X]`: Enable Ares feature [X]?
+#cmakedefine ARES_ENABLE_PROFILER

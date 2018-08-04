@@ -19,7 +19,7 @@ add_executable(Ares.Core ${ARES_WIN32}
     Resource/Gltf.cc Resource/Json.cc Resource/ShaderSrc.cc
     Visual/Window.cc Visual/GLFW.cc
     Input/InputMapper.cc Input/InputModule.cc
-    Debug/Log.cc Debug/DebugModule.cc
+    Debug/Log.cc Debug/DebugModule.cc Debug/Profiler.cc
     Mem/Mem.cc Mem/MallocOverrides.cc Mem/NewOverrides.cc
     Scene/Scene.cc
     Gfx/GfxModule.cc Gfx/GfxRenderer.cc Gfx/GfxPipeline.cc
@@ -115,6 +115,8 @@ target_compile_options(Ares.Core PRIVATE -DARES_SRCDIR_PATH_LENGTH=${SRCDIR_PATH
 
 include(TestBigEndian)
 test_big_endian(ARES_PLATFORM_BIG_ENDIAN)
+
+option(ARES_ENABLE_PROFILER "Wether to enable Ares::Profiler or not" ON)
 
 configure_file(BuildConfig.h.in "${CMAKE_CURRENT_BINARY_DIR}/Ares/BuildConfig.h"
                ESCAPE_QUOTES

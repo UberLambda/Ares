@@ -8,6 +8,7 @@ namespace Ares
 {
 
 class Log; // (#include "Debug/Log.hh")
+class Profiler; // (#include "Debug/Profiler.hh")
 class TaskScheduler; // (#include "Task/TaskScheduler.hh")
 class Scene; // (#include "Scene/Scene.hh")
 class ResourceLoader; // (#include "Data/ResourceLoader.hh")
@@ -25,6 +26,9 @@ struct ARES_API GlobalData
 {
     /// The main engine log.
     Log* log;
+
+    /// The main engine profiler.
+    Profiler* profiler;
 
     /// The task scheduler for the engine.
     TaskScheduler* scheduler;
