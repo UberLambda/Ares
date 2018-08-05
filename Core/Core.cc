@@ -1,7 +1,9 @@
 #include "Core.hh"
 
 #include <algorithm>
+#include <uv.h>
 #include <Ares/BuildConfig.h>
+#include "Mem/MemFuncs.hh"
 #include "CoreConfig.h"
 #include "Debug/Log.hh"
 #include "Debug/Profiler.hh"
@@ -53,6 +55,9 @@ Core::~Core()
     delete g().profiler;
     delete g().log;
 
+    // Stop the libuv default loop
+    uv_loop_close(uv_default_loop());
+
     // `~DoubleBuffer<FrameData>()` will free everything else
 }
 
@@ -88,6 +93,13 @@ bool Core::init()
                  "Log: %u messages in pool", glog.messagePoolSize());
 
         // FIXME
+    }
+
+    // libuv
+    {
+        ARES_log(glog, Trace, "libuv version: %s", uv_version_string());
+
+        uv_replace_allocator(Ares::malloc, Ares::realloc, Ares::calloc, Ares::free);
     }
 
     // Profiler
@@ -222,6 +234,9 @@ bool Core::run()
 
             // TODO: Do main thread stuff that HAS to be done once per frame here
             // (core file I/O, ...)
+
+            // Update the default libuv event loop
+            uv_run(uv_default_loop(), UV_RUN_NOWAIT);
 
             // Flush a bunch of this frame's log messages here.
             // This amount of messages to be flushed should be enough to make sure
