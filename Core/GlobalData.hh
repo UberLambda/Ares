@@ -1,8 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 #include "Api.h"
 #include "Base/TypeMap.hh"
+#include "Debug/Profiler.hh"
 
 namespace Ares
 {
@@ -29,6 +31,9 @@ struct ARES_API GlobalData
 
     /// The main engine profiler.
     Profiler* profiler;
+
+    /// The profiling events that happened last frame.
+    std::vector<Profiler::TimeEvent> profilerEvents;
 
     /// The task scheduler for the engine.
     TaskScheduler* scheduler;

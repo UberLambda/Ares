@@ -107,22 +107,11 @@ bool Core::init()
         g().profiler = new Profiler();
 
 #ifdef ARES_ENABLE_PROFILER
-        auto err = g().profiler->connect(ARES_CORE_PROFILER_ADDRESS);
-        if(err)
-        {
-            ARES_log(glog, Error, "Failed to enable profiling on %s: %s",
-                     ARES_CORE_PROFILER_ADDRESS, err);
-        }
-        else
-        {
-            ARES_log(glog, Debug, "Profiling enabled on %s",
-                     ARES_CORE_PROFILER_ADDRESS);
-        }
+        ARES_log(glog, Debug, "Profiler enabled");
 #else
-        ARES_log(glog, Debug, "Profiling disabled");
+        ARES_log(glog, Debug, "Profiler disabled");
 #endif
     }
-
 
     ARES_log(glog, Info, "Init");
 
@@ -207,7 +196,7 @@ bool Core::run()
     while(state_ == Running)
     {
         {
-            TimeProbe timer(*g().profiler, "core.mainLoop");
+            TimeProbe timer(*g().profiler, "Core.MainLoop");
 
             // Schedule the update tasks for each module that can run on worker
             // threads; use `frameVar` as counter
@@ -251,6 +240,7 @@ bool Core::run()
                 while(frameVar.load() != 0)
                 {
                     // TODO: Do something more useful, don't just spinlock
+                    // TODO: Atleast lock with a condition variable
                 }
             }
 
@@ -262,8 +252,9 @@ bool Core::run()
             frameData_.swap();
         }
 
-        // Flush the profiler. Does nothing `#ifndef ARES_ENABLE_PROFILER`
-        g().profiler->flush();
+        // Flush all of the profiler's events. Does nothing `#ifndef ARES_ENABLE_PROFILER`
+        g().profilerEvents.clear(); // IMPORTANT Otherwise profiling events would accumulate forever!
+        (void)g().profiler->flush(g().profilerEvents);
     }
 
     ARES_log(glog, Info, "Done running");

@@ -28,8 +28,17 @@ void DebugModule::mainUpdate(Core& core)
 
 Task DebugModule::updateTask(Core& core)
 {
+    core_ = &core;
+
     static const auto updateFunc = [](TaskScheduler* scheduler, void* data)
     {
+        auto dbgMod = reinterpret_cast<DebugModule*>(data);
+
+        const auto& profilerEvents = dbgMod->core_->g().profilerEvents;
+        for(Profiler::TimeEvent event : profilerEvents)
+        {
+            // TODO IMPORTANT Output profiling data to WebSocket!
+        }
     };
     return {updateFunc, this};
 }

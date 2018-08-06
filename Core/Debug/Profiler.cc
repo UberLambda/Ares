@@ -6,6 +6,7 @@ namespace Ares
 {
 
 Profiler::Profiler()
+    : timeEvents_(), timeEventsConsumer_(timeEvents_)
 {
 }
 
@@ -13,23 +14,19 @@ Profiler::~Profiler()
 {
 }
 
-ErrString Profiler::connect(const std::string& address)
-{
-   // FIXME IMPLEMENT Initialize a WebSocket server bound to `address` that will
-   //       send data to clients on `flush()`
-   return "Unimplemented";
-}
-
-
-void Profiler::flush()
+size_t Profiler::flush(std::vector<TimeEvent>& events)
 {
 #ifdef ARES_ENABLE_PROFILER
-    // Write each header to socket
-    TimeEvent event;
-    while(timeEvents_.try_dequeue(event))
-    {
-        // FIXME IMPLEMENT Send the event to profiling clients via WebSocket
-    }
+    size_t oldSize = events.size();
+    size_t n = timeEvents_.size_approx();
+
+    events.resize(oldSize + n);
+
+    TimeEvent* it = &events[oldSize]; // The first event to write in `events`
+    return timeEvents_.try_dequeue_bulk(timeEventsConsumer_, it, n);
+
+#else
+    return 0;
 #endif
 }
 
