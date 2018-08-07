@@ -4,6 +4,8 @@
 #include <concurrentqueue.h>
 #include <atomic>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <list>
 #include <Core/Api.h>
 #include <Core/Task/Task.hh>
@@ -62,6 +64,8 @@ class ARES_API TaskScheduler
     };
     WorkerData* workerData_;
 
+    std::mutex sleepingMutex_;
+    std::condition_variable sleepingCond_;
 
     /// Keeps attempting to grab a fiber until it succeeds, then returns it.
     /// **ASSERTS** `false` if the number of attempts grabbing a fiber exceeeds `GRAB_DEADLOCK_THRES`

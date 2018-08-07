@@ -44,7 +44,11 @@ TaskScheduler::TaskScheduler(unsigned int nWorkers, unsigned int nFibers, size_t
 TaskScheduler::~TaskScheduler()
 {
     // Spin down all workers
+    // If there were any workers sleeping waiting for `condVar_`, notify them;
+    // they will stop sleeping since `running_` is now `false`
     running_ = false;
+    sleepingCond_.notify_all();
+
     for(std::thread* worker = workers_; worker != workers_ + nWorkers_; worker ++)
     {
         worker->join();
@@ -63,6 +67,12 @@ void TaskScheduler::schedule(Task task, TaskVar* var)
 
 void TaskScheduler::schedule(const Task* tasks, size_t n, TaskVar* var)
 {
+    if(n == 0)
+    {
+        // No tasks to add
+        return;
+    }
+
     if(var)
     {
         // Increment var by n atomically
@@ -74,6 +84,11 @@ void TaskScheduler::schedule(const Task* tasks, size_t n, TaskVar* var)
     {
         tasks_.enqueue({*it, var});
     }
+
+    // If any thread is `wait()`ing on `sleepingCond_` for a task to be added to
+    // the queue, it will get notified of the new task[s] being added; otherwise,
+    // the `notify_all()` will simply be ignored.
+    sleepingCond_.notify_all();
 }
 
 void TaskScheduler::waitFor(TaskVar& var, TaskVarValue target)
@@ -239,10 +254,14 @@ void TaskScheduler::fiberFunc(void* data)
     }
     else
     {
-        // No more tasks, sleep for a bit to lower the CPU consumption
-        // FIXME >>IMPORTANT<< - Have a flag to let this sleep be disabled so
-        //       that the CPU can be used fully!!
-        std::this_thread::sleep_for(std::chrono::nanoseconds(1));
+        // No more tasks. Lock (sleep) until any new task is scheduled or `running_`
+        // is set to false to lower the CPU consumption.
+        std::unique_lock<std::mutex> sleepLock(scheduler->sleepingMutex_);
+        while(scheduler->running_.load()
+              && scheduler->tasks_.size_approx() == 0)
+        {
+            scheduler->sleepingCond_.wait(sleepLock);
+        }
     }
 
     if(!scheduler->running_)
