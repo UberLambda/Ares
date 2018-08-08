@@ -149,7 +149,7 @@ public:
     }
 };
 
-inline std::ostream& ARES_API operator<<(std::ostream& stream, const Path& path)
+inline /*ARES_API*/ std::ostream& operator<<(std::ostream& stream, const Path& path)
 {
     stream << path.path_;
     return stream;

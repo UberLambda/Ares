@@ -300,7 +300,7 @@ public:
 /// to `T`'s constructor.
 /// Threadsafe and lockless.
 template <typename T, typename... TArgs>
-inline Ref<T> ARES_API makeRef(TArgs&&... tArgs)
+inline /*ARES_API*/ Ref<T> makeRef(TArgs&&... tArgs)
 {
     using Ref = Ref<T>;
     using RefData = typename Ref::Data;
@@ -317,7 +317,7 @@ inline Ref<T> ARES_API makeRef(TArgs&&... tArgs)
 ///              use `get()` on the returned ref instead.
 /// Threadsafe and lockless.
 template <typename T>
-inline Ref<T> ARES_API intoRef(T* t)
+inline /*ARES_API*/ Ref<T> intoRef(T* t)
 {
     // Abstract type: replace the `T*` in the `ref.data_: THeapBox`
     using Ref = Ref<T>;

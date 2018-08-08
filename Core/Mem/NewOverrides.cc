@@ -15,53 +15,53 @@
 // NOTE: Technically, some of these operators should throw `std::bad_alloc` on error,
 //       but we don't use exceptions here
 
-extern void* ARES_API operator new(size_t size, const std::nothrow_t&) noexcept
+ARES_API extern void* operator new(size_t size, const std::nothrow_t&) noexcept
 {
     return Ares::malloc(size);
 }
 
-extern void* ARES_API operator new(size_t size)
+ARES_API extern void* operator new(size_t size)
 {
     return Ares::malloc(size);
 }
 
-extern void* ARES_API operator new[](size_t size, const std::nothrow_t&) noexcept
+ARES_API extern void* operator new[](size_t size, const std::nothrow_t&) noexcept
 {
     return Ares::malloc(size);
 }
 
-extern void* ARES_API operator new[](size_t size)
+ARES_API extern void* operator new[](size_t size)
 {
     return Ares::malloc(size);
 }
 
 
-extern void ARES_API operator delete(void* ptr, const std::nothrow_t&) noexcept
+ARES_API extern void operator delete(void* ptr, const std::nothrow_t&) noexcept
 {
     Ares::free(ptr);
 }
 
-extern void ARES_API operator delete(void* ptr) noexcept
+ARES_API extern void operator delete(void* ptr) noexcept
 {
     Ares::free(ptr);
 }
 
-extern void ARES_API operator delete(void* ptr, size_t size) noexcept // (C++14)
+ARES_API extern void operator delete(void* ptr, size_t size) noexcept // (C++14)
 {
     Ares::free(ptr);
 }
 
-extern void ARES_API operator delete[](void* ptr, const std::nothrow_t&) noexcept
+ARES_API extern void operator delete[](void* ptr, const std::nothrow_t&) noexcept
 {
     Ares::free(ptr);
 }
 
-extern void ARES_API operator delete[](void* ptr) noexcept
+ARES_API extern void operator delete[](void* ptr) noexcept
 {
     Ares::free(ptr);
 }
 
-extern void ARES_API operator delete[](void* ptr, size_t size) noexcept // (C++14)
+ARES_API extern void operator delete[](void* ptr, size_t size) noexcept // (C++14)
 {
     // Behaves identically to unsized `free()`
     Ares::free(ptr);

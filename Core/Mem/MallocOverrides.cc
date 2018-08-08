@@ -29,38 +29,38 @@ extern "C"
 {
 // **THESE SYMBOLS WILL HAVE PRECEDENCE OVER libc's !!**
 
-extern ARES_RESTRICT void* ARES_CDECL ARES_API malloc(size_t size)
+extern ARES_API ARES_RESTRICT void* ARES_CDECL malloc(size_t size)
 // C standard library
 {
     return Ares::malloc(size);
 }
 
-extern ARES_RESTRICT void* ARES_CDECL ARES_API calloc(size_t n, size_t size)
+extern ARES_API ARES_RESTRICT void* ARES_CDECL calloc(size_t n, size_t size)
 // C standard library
 {
     return Ares::calloc(n, size);
 }
 
-extern void* ARES_CDECL ARES_API realloc(void* ptr, size_t size)
+extern ARES_API void* ARES_CDECL realloc(void* ptr, size_t size)
 // C standard library
 {
     return Ares::realloc(ptr, size);
 }
 
-extern ARES_RESTRICT void* ARES_CDECL ARES_API aligned_alloc(size_t alignment, size_t size)
+extern ARES_API ARES_RESTRICT void* ARES_CDECL aligned_alloc(size_t alignment, size_t size)
 // C (C11) standard library
 {
     return Ares::aligned_alloc(alignment, size);
 }
 
-extern void ARES_CDECL ARES_API free(void* ptr)
+extern ARES_API void ARES_CDECL free(void* ptr)
 // C standard library
 {
     Ares::free(ptr);
 }
 
 
-extern int ARES_CDECL ARES_API posix_memalign(void** memptr, size_t alignment, size_t size)
+extern ARES_API int ARES_CDECL posix_memalign(void** memptr, size_t alignment, size_t size)
 // POSIX C extension
 {
     *memptr = Ares::aligned_alloc(alignment, size);
@@ -68,13 +68,13 @@ extern int ARES_CDECL ARES_API posix_memalign(void** memptr, size_t alignment, s
 }
 
 
-extern void* ARES_CDECL ARES_API reallocf(void* ptr, size_t size)
+extern ARES_API void* ARES_CDECL reallocf(void* ptr, size_t size)
 // BSD C extension
 {
     return Ares::realloc(ptr, size);
 }
 
-extern void* ARES_CDECL ARES_API reallocarray(void* ptr, size_t count, size_t size)
+extern ARES_API void* ARES_CDECL reallocarray(void* ptr, size_t count, size_t size)
 // BSD C extension
 {
     // FIXME Actually check for arguments' validity! (see `reallocarray()`'s manual)

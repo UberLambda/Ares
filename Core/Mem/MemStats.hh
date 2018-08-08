@@ -25,9 +25,9 @@ struct ARES_API MemStats
 };
 
 /// Updates, then returns current statistics about program-wide (global) memory [de]allocations.
-const MemStats& ARES_API memStats();
+ARES_API const MemStats& memStats();
 
 /// Returns the name of the library used for `malloc()/free()`.
-const char* ARES_API memBackendName();
+ARES_API const char* memBackendName();
 
 }
