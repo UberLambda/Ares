@@ -189,9 +189,10 @@ public:
 #   define ARES_SRCDIR_PATH_LENGTH 0
 #endif
 
+
 /// A shortened __FILE__, obtained by skipping `ARES_SRCDIR_PATH_LENGTH` characters from it
 /// See: https://stackoverflow.com/a/40947954 and Debug/Log/Log.hh and Core/CMakeLists.txt
-#define ARES_FILE_ (__FILE__ + ARES_SRCDIR_PATH_LENGTH)
+#define ARES_FILE_ (&__FILE__[ARES_SRCDIR_PATH_LENGTH])
 
 /// A convenience macro that `log()`s a [un]formatted message coming from the
 /// current file and line to a `Log`.
