@@ -550,7 +550,8 @@ void GfxModule::mainUpdate(Core& core)
     // FIXME TEST, USE A REAL EVENT SYSTEM TO TELL THE CORE TO QUIT!
     if(window_->quitRequested())
     {
-        core.halt();
+        auto quitFunc = *core.g().eventMatrix.get<>("core.halt");
+        quitFunc();
     }
 }
 

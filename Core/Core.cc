@@ -176,6 +176,9 @@ bool Core::init()
         }
     }
 
+    // Register the event alias for `halt()` in the event matrix.
+    *g().eventMatrix.get<>("core.halt") += Delegate<void()>::from<Core, &Core::halt>(this);
+
     state_ = Inited;
     return true;
 }

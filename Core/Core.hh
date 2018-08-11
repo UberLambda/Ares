@@ -48,6 +48,11 @@ private:
     /// some information on error.
     bool initModule(Module* module);
 
+    /// Marks the core as halted, stopping the main loop if it was running.
+    /// `state()` will if switch back to `Inited` from `Running`, or stay `Dead`
+    /// if the core was `Dead`.
+    void halt();
+
 public:
     /// Creates a new core instance, but does not initialize it; see `init()`.
     Core();
@@ -67,19 +72,14 @@ public:
     /// See `CoreConfig.h` for some initialization parameters of inner core structures.
     bool init();
 
-    /// Starts running the core's main loop; it will return only after `halt()`
-    /// is called by an inner task/interrupt handler/something else while the core
-    /// is running.
+    /// Starts running the core's main loop; it will return only after the
+    /// "core.halt" event is called by an inner task/interrupt handler/something
+    /// else while the core is running.
     /// Returns `false` if the core could not be run because it was dead or already
     /// running.
     /// **Call this from the main thread!**
     /// On success, `state()` will switch to `Running`.
     bool run();
-
-    /// Marks the core as halted, stopping the main loop if it was running.
-    /// `state()` will if switch back to `Inited` from `Running`, or stay `Dead`
-    /// if the core was `Dead`.
-    void halt();
 
     /// Returns the current state of the core.
     inline State state() const
