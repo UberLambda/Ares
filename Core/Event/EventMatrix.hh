@@ -1,46 +1,77 @@
 #pragma once
 
+#include <unordered_map>
+#include <memory>
+#include <utility>
+#include <typeinfo>
 #include <Core/Api.h>
 #include <Core/Base/TypeMap.hh>
-#include <Core/Event/EventQueue.hh>
+#include <Core/Base/KeyString.hh>
+#include <Core/Base/MultiDelegate.hh>
 
 namespace Ares
 {
 
-/// A collection of `EventQueue`s of types.
+/// A collection of event callbacks indexed by a name string.
 class ARES_API EventMatrix
 {
-    TypeMap matrix_;
+public:
+    /// The type of the key identifying a particular event.
+    using Key = KeyString<32>;
+
+private:
+    struct EventSlotBase
+    {
+        const std::type_info& delegateTypeId;
+
+        EventSlotBase(const std::type_info& delegateTypeId)
+            : delegateTypeId(delegateTypeId)
+        {
+        }
+        virtual ~EventSlotBase() = default;
+    };
+
+    template <typename... Args>
+    struct EventSlot : public EventSlotBase
+    {
+        using MultiDelegate = Ares::MultiDelegate<void(Args...)>;
+
+        EventSlot()
+            : EventSlotBase(typeid(MultiDelegate))
+        {
+        }
+        ~EventSlot() override = default;
+
+        MultiDelegate delegate;
+    };
+
+    using EventSlotHolder = std::unique_ptr<EventSlotBase>;
+
+    std::unordered_map<Key, EventSlotHolder> matrix_;
 
 public:
     EventMatrix() = default;
     ~EventMatrix() = default;
 
-
-    /// Gets a pointer to the event queue for `T` events in the matrix, or null
-    /// if no such queue is present.
-    template <typename T>
-    EventQueue<T>* getQueue() const
+    template <typename... Args>
+    inline MultiDelegate<void(Args...)>* get(const Key& key)
     {
-        return matrix_.get<EventQueue<T>>();
-    }
-
-    /// Attempts to add a new queue for events of type `T` to the matrix.
-    /// Returns `false` and does nothing if such a queue already existed.
-    template <typename T>
-    bool addQueue()
-    {
-        return matrix_.add<EventQueue<T>>();
-    }
-
-
-    /// Clears every event queue in the event matrix.
-    void clearAllQueues()
-    {
-        for(const std::pair<std::type_index, void*>& queuePair : matrix_)
+        auto slotIt = matrix_.find(key);
+        if(slotIt == matrix_.end())
         {
-            auto queue = reinterpret_cast<EventQueueBase*>(queuePair.second);
-            queue->clear();
+            EventSlotHolder slotHolder(new EventSlot<Args...>());
+            slotIt = matrix_.insert({key, std::move(slotHolder)}).first;
+        }
+
+        EventSlotBase* slotBase = slotIt->second.get();
+        if(slotBase->delegateTypeId == typeid(MultiDelegate<void(Args...)>))
+        {
+            auto slot = reinterpret_cast<EventSlot<Args...>*>(slotBase);
+            return &slot->delegate;
+        }
+        else
+        {
+            return nullptr;
         }
     }
 };

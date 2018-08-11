@@ -5,6 +5,7 @@
 #include "Api.h"
 #include "Base/TypeMap.hh"
 #include "Debug/Profiler.hh"
+#include "Event/EventMatrix.hh"
 
 namespace Ares
 {
@@ -46,6 +47,9 @@ struct ARES_API GlobalData
 
     /// Any of the engine's extra, ondemand facilities (`Window`, ...).
     TypeMap facilities;
+
+    /// The engine's core event matrix where all event callbacks are registered.
+    EventMatrix eventMatrix;
 };
 
 }
