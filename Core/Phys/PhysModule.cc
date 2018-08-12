@@ -29,13 +29,6 @@ PhysModule::~PhysModule()
 
 bool PhysModule::init(Core& core)
 {
-    // Resize `enitiesData_` to fit as many entities as there are in the scene
-    // (plus dummy data for entity 0)
-    // TODO This can be done here since the number of entities in the scene is
-    //      constant, but one day it could potentially increase at runtime; think
-    //      of a way to solve this issue
-    entitiesData_.resize(core.g().scene->maxEntities() + 1);
-
     ARES_log(glog, Trace, "Starting up Bullet Physics (version %d)", btGetVersion());
 
     broadphase_ = new btDbvtBroadphase();
@@ -48,6 +41,9 @@ bool PhysModule::init(Core& core)
     dynamicsWorld_ = new btDiscreteDynamicsWorld(collisionDispatcher_, broadphase_,
                                                  constraintSolver_, collisionConfig_);
     dynamicsWorld_->setGravity(DEFAULT_GRAVITY);
+
+    // Allocate a `CompStore` for the internal `PhysDataComp`s.
+    (void)core.g().scene->storeFor<PhysDataComp>();
 
     ARES_log(glog, Debug, "PhysModule online");
     return true;
@@ -169,118 +165,165 @@ btCollisionShape* PhysModule::createBulletCollisionShape(const CollisionShape& c
     }
 }
 
-PhysModule::EntityData PhysModule::createEntityData(const TransformComp& transform,
-                                                    const RigidBodyComp& rigidBody)
+PhysModule::PhysDataComp* PhysModule::addPhysDataComp(EntityRef entity)
 {
+    auto transform = entity.comp<TransformComp>();
+    auto rigidBody = entity.comp<RigidBodyComp>();
+
+    if(!transform || !rigidBody)
+    {
+        // Error: this entity does not have a transform or rigid body!
+        return nullptr;
+    }
+
     // Get a reference or instantiate the Bullet collision shape corresponding to the Ares one
-    Ref<btCollisionShape>& bulletCollisionShape = collisionShapeMap_[rigidBody.collisionShape];
+    Ref<btCollisionShape>& bulletCollisionShape = collisionShapeMap_[rigidBody->collisionShape];
     if(!bulletCollisionShape)
     {
         // It's the first time we are using this Ares collision shape for an entity,
         // create its Bullet counterpart
-        btCollisionShape* newBulletCollisionShape = createBulletCollisionShape(*rigidBody.collisionShape);
+        btCollisionShape* newBulletCollisionShape = createBulletCollisionShape(*rigidBody->collisionShape);
         bulletCollisionShape = intoRef<btCollisionShape>(newBulletCollisionShape);
     }
     // Else this collision shape has already been used for another entity and so
     // we have the respective Bullet one ready
 
-    // Create the Bullet motion state from the initial Ares transform and then
-    // create the corresponding Bullet rigid body
-    btQuaternion bulletRot(transform.rotation.x,
-                           transform.rotation.y,
-                           transform.rotation.z,
-                           transform.rotation.w);
-    btVector3 bulletCenter(transform.position.x,
-                           transform.position.y,
-                           transform.position.z);
-    btTransform bulletTransform(bulletRot, bulletCenter);
-
-    btScalar bulletMass = rigidBody.type == RigidBodyComp::Dynamic
-                          ? rigidBody.mass
+    btScalar bulletMass = rigidBody->type == RigidBodyComp::Dynamic
+                          ? rigidBody->mass
                           : 0; // Static and kinematic rigid bodies have 0 mass in Bullet
 
     btVector3 bulletLocalInertia;
     bulletCollisionShape->calculateLocalInertia(bulletMass, bulletLocalInertia);
 
-    EntityData data;
-    data.rigidBody = rigidBody; // (copies references)
-    data.bulletCollisionShape = bulletCollisionShape; // (increases refcount)
-    data.bulletMotionState = new btDefaultMotionState(bulletTransform);
+    // Add the new `PhysDataComp`
+    PhysDataComp* physDataComp = entity.setComp<PhysDataComp>({});
+
+    physDataComp->bulletCollisionShape = bulletCollisionShape; // (increases refcount)
+
+    // Setup the motion state that will sync `TransformComp`s <=> Bullet's transforms
+    // for active Bullet rigid bodies
+    physDataComp->bulletMotionState = PhysMotionState(entity);
 
     btRigidBody::btRigidBodyConstructionInfo bulletRigidBodyInfo(
-                bulletMass, data.bulletMotionState, data.bulletCollisionShape.get(),
+                bulletMass,
+                &physDataComp->bulletMotionState,
+                physDataComp->bulletCollisionShape.get(),
                 bulletLocalInertia);
-    bulletRigidBodyInfo.m_friction = rigidBody.props.friction;
-    bulletRigidBodyInfo.m_rollingFriction = rigidBody.props.rollingFriction;
-    bulletRigidBodyInfo.m_restitution = rigidBody.props.restitution;
-    bulletRigidBodyInfo.m_linearDamping = rigidBody.props.angularDamping;
-    bulletRigidBodyInfo.m_angularDamping = rigidBody.props.angularDamping;
+    // NOTE: `&physDataComp->bulletMotionState` works because an entity's `PhysDataComp`
+    //       is heap-allocated and its address will not change throughout the program;
+    //       hence, its `bulletMotionState` field's address will not change, too
 
-    auto bulletRigidBody = data.bulletRigidBody = new btRigidBody(bulletRigidBodyInfo);
+    bulletRigidBodyInfo.m_friction = rigidBody->props.friction;
+    bulletRigidBodyInfo.m_rollingFriction = rigidBody->props.rollingFriction;
+    bulletRigidBodyInfo.m_restitution = rigidBody->props.restitution;
+    bulletRigidBodyInfo.m_linearDamping = rigidBody->props.angularDamping;
+    bulletRigidBodyInfo.m_angularDamping = rigidBody->props.angularDamping;
 
-    if(rigidBody.type == RigidBodyComp::Kinematic)
+    physDataComp->bulletRigidBody = new btRigidBody(bulletRigidBodyInfo);
+    if(rigidBody->type == RigidBodyComp::Kinematic)
     {
-       int bulletCollisionFlags = bulletRigidBody->getCollisionFlags();
+       int bulletCollisionFlags = physDataComp->bulletRigidBody->getCollisionFlags();
        bulletCollisionFlags |= btRigidBody::CF_KINEMATIC_OBJECT;
-       bulletRigidBody->setCollisionFlags(bulletCollisionFlags);
+       physDataComp->bulletRigidBody->setCollisionFlags(bulletCollisionFlags);
     }
 
-    return data;
+    // Mark the Bullet data as synced to the current `rigidBody`'s values
+    physDataComp->cachedRigidBody = *rigidBody;
+
+    return physDataComp;
 }
 
-void PhysModule::updateEntityData(PhysModule::EntityData& entityData,
-                                  const RigidBodyComp& rigidBody)
+void PhysModule::updatePhysDataComp(EntityRef entity)
 {
     bool massPropsChanged = false; // `true` if mass and/or inertia of the object changed
 
-    if(entityData.rigidBody.collisionShape != rigidBody.collisionShape)
-    {
-        // Collision shape for the entity changed; update it and its Bullet
-        // counterpart in the entity data
+    auto rigidBodyComp = entity.comp<RigidBodyComp>();
+    auto physDataComp = entity.comp<PhysDataComp>();
 
-        Ref<btCollisionShape>& bulletCollisionShape = collisionShapeMap_[rigidBody.collisionShape];
-        if(!bulletCollisionShape)
+    if(rigidBodyComp)
+    {
+        if(physDataComp)
         {
-            // It's the first time we are using this Ares collision shape for an entity,
-            // create its Bullet counterpart
-            btCollisionShape* newBulletCollisionShape = createBulletCollisionShape(*rigidBody.collisionShape);
-            bulletCollisionShape = intoRef<btCollisionShape>(newBulletCollisionShape);
+            // The entity has both an Ares RigidBody and Bullet data
+            // Check if the two are in sync; if they are not, sync them
+            if(physDataComp->cachedRigidBody.collisionShape != rigidBodyComp->collisionShape)
+            {
+                // Collision shape for the entity changed; update it and its Bullet
+                // counterpart in the entity data
+
+                Ref<btCollisionShape>& bulletCollisionShape = collisionShapeMap_[rigidBodyComp->collisionShape];
+                if(!bulletCollisionShape)
+                {
+                    // It's the first time we are using this Ares collision shape for an entity,
+                    // create its Bullet counterpart
+                    btCollisionShape* newBulletCollisionShape = createBulletCollisionShape(*rigidBodyComp->collisionShape);
+                    bulletCollisionShape = intoRef<btCollisionShape>(newBulletCollisionShape);
+                }
+                // Else this collision shape has already been used for another entity and so
+                // we have the respective Bullet one ready
+
+                // Need to recalculate inertia since the shape changed
+                massPropsChanged = true;
+
+                // Update the Bullet collision shape
+                physDataComp->bulletCollisionShape = bulletCollisionShape;
+                physDataComp->bulletRigidBody->setCollisionShape(bulletCollisionShape.get());
+
+                // Mark the Ares and Bullet collision shapes as synced
+                physDataComp->cachedRigidBody.collisionShape = rigidBodyComp->collisionShape;
+            }
+
+            if(physDataComp->cachedRigidBody.mass != rigidBodyComp->mass)
+            {
+                // Need to recalculate inertia because the mass changed; this is needed
+                // to apply the new mass to the rigid body
+                massPropsChanged = true;
+
+                // Mark the Ares and Bullet masses as synced
+                physDataComp->cachedRigidBody.mass = rigidBodyComp->mass;
+            }
+
+            // FIXME IMPLEMENT IMPORTANT Check if any of `rigidBody.props` changed; apply
+            //       each of them that changed to the Bullet rigid body here
+
+
+            if(massPropsChanged)
+            {
+                // Apply new mass and inertia to the Bullet rigid body
+                btScalar bulletMass = rigidBodyComp->type == RigidBodyComp::Dynamic
+                                      ? rigidBodyComp->mass
+                                      : 0; // Static and kinematic rigid bodies have 0 mass in Bullet
+                btVector3 bulletLocalInertia;
+                physDataComp->bulletCollisionShape->calculateLocalInertia(bulletMass, bulletLocalInertia);
+
+                physDataComp->bulletRigidBody->setMassProps(physDataComp->cachedRigidBody.mass, bulletLocalInertia);
+            }
         }
-        // Else this collision shape has already been used for another entity and so
-        // we have the respective Bullet one ready
+        else
+        {
+            // The entity has had a rigid body added to it but no Bullet data yet.
 
-        // Need to recalculate inertia since the shape changed
-        massPropsChanged = true;
+            // Create the Bullet data
+            physDataComp = addPhysDataComp(entity);
 
-        entityData.bulletRigidBody->setCollisionShape(bulletCollisionShape.get());
-
-        entityData.rigidBody.collisionShape = rigidBody.collisionShape;
-        entityData.bulletCollisionShape = bulletCollisionShape;
+            // Add the rigid body to the dynamics world so that Bullet will start
+            // simulating the entity next frame
+            dynamicsWorld_->addRigidBody(physDataComp->bulletRigidBody);
+        }
     }
-
-    if(entityData.rigidBody.mass != rigidBody.mass)
+    else
     {
-        // Need to recalculate inertia because the mass changed and to apply the
-        // new mass to the rigid body
-        massPropsChanged = true;
+        // The entity does not have Ares rigid body data
 
-        entityData.rigidBody.mass = rigidBody.mass;
-    }
+        if(physDataComp)
+        {
+            // The entity still has Bullet data but does not have a rigid body anymore;
+            // remove the Bullet rigid body from the simulation
+            dynamicsWorld_->removeRigidBody(physDataComp->bulletRigidBody);
 
-    // FIXME IMPLEMENT IMPORTANT Check if any of `rigidBody.props` changed; apply
-    //       each of them that changed to the Bullet rigid body here
-
-
-    if(massPropsChanged)
-    {
-        // Apply new mass and inertia to the Bullet rigid body
-        btScalar bulletMass = rigidBody.type == RigidBodyComp::Dynamic
-                              ? rigidBody.mass
-                              : 0; // Static and kinematic rigid bodies have 0 mass in Bullet
-        btVector3 bulletLocalInertia;
-        entityData.bulletCollisionShape->calculateLocalInertia(bulletMass, bulletLocalInertia);
-
-        entityData.bulletRigidBody->setMassProps(entityData.rigidBody.mass, bulletLocalInertia);
+            delete physDataComp->bulletRigidBody; physDataComp->bulletRigidBody = nullptr;
+            entity.erase<PhysDataComp>();
+        }
     }
 }
 
@@ -328,56 +371,14 @@ Task PhysModule::updateTask(Core& core)
         Scene* scene = physMod->core_->g().scene;
         for(auto it = scene->begin(); it != scene->end(); it ++)
         {
-            auto transform = it->comp<TransformComp>();
-            if(!transform)
-            {
-                // An entity needs a transform to be affected by physics
-                continue;
-            }
-
-            EntityData& entityData = physMod->entitiesData_[it->id()];
-
-            auto rigidBody = it->comp<RigidBodyComp>();
-            if(!rigidBody)
-            {
-                if(entityData.bulletRigidBody != nullptr)
-                {
-                    // This entity used to have a Ares rigid body that now has
-                    // been deleted, but its Bullet counterpart is still alive.
-                    // Destroy the Bullet rigid body as it is not needed anymore.
-                    physMod->dynamicsWorld_->removeRigidBody(entityData.bulletRigidBody);
-                    (void)entityData.~EntityData(); // Delete the Bullet motion state and rigid body
-                    (void)entityData.rigidBody.collisionShape.~Ref(); // (for potential cleanup)
-                    (void)entityData.bulletCollisionShape.~Ref(); // (for potential cleanup)
-                }
-                continue;
-            }
-
-            if(entityData.bulletRigidBody == nullptr)
-            {
-                // The entity with this id has a `RigidBodyComp` but no actual Bullet
-                // collision shape, motion state or rigid body associated to it.
-                entityData = physMod->createEntityData(*transform, *rigidBody);
-
-                // Add the rigid body now so that Bullet will start simulating the
-                // entity next frame
-                physMod->dynamicsWorld_->addRigidBody(entityData.bulletRigidBody);
-            }
-
-            // Check if `RigidBodyComp` properties changed; if they did, apply them
-            physMod->updateEntityData(entityData, *rigidBody);
-
-            // Apply the Bullet transform to the Ares TransformComp
-            btTransform bulletEntityTransform;
-            entityData.bulletMotionState->getWorldTransform(bulletEntityTransform);
-
-            btVector3 bulletPos = bulletEntityTransform.getOrigin();
-            transform->position = {bulletPos.x(), bulletPos.y(), bulletPos.z()};
-
-            btQuaternion bulletRot = bulletEntityTransform.getRotation();
-            transform->rotation = {bulletRot.x(), bulletRot.y(), bulletRot.z(), bulletRot.w()};
+            // Check if Bullet data has to be created/deleted/synced with Ares'
+            physMod->updatePhysDataComp(*it);
         }
     };
+
+    // Bullet's 3D transforms will automatically be applied to Ares' `TransformComp`s
+    // thanks to `PhysMotionState`
+
     return {updateFunc, this};
 }
 
