@@ -8,7 +8,7 @@
 namespace Ares
 {
 
-/// A reference to an entity inside of a scene.
+/// A nullable reference to an entity inside of a scene.
 /// **WARNING**: Only valid up to the parent scene's destruction!
 class ARES_API EntityRef
 {
@@ -23,6 +23,20 @@ class ARES_API EntityRef
     }
 
 public:
+    /// Initializes a new null reference.
+    EntityRef(std::nullptr_t null=nullptr)
+        : scene_(nullptr), id_(INVALID_ENTITY_ID)
+    {
+    }
+
+    /// Returns `false` if the `EntityRef` is null.
+    inline operator bool() const
+    {
+        return scene_ && id_ != INVALID_ENTITY_ID;
+    }
+
+
+
     EntityRef(const EntityRef& toCopy)
     {
         (void)operator=(toCopy);
@@ -59,13 +73,15 @@ public:
     ~EntityRef() = default;
 
 
-    /// Returns a reference to the parent scene.
-    inline const Scene& scene() const
+    /// Returns a pointer to the parent scene.
+    /// Returns null for a null `EntityRef`.
+    inline const Scene* scene() const
     {
-        return *scene_;
+        return scene_;
     }
 
     /// Returns the id of the underlying entity.
+    /// Returns `INVALID_ENTITY_ID` for a null `EntityRef`.
     inline EntityId id() const
     {
         return id_;
@@ -85,58 +101,45 @@ public:
 
     /// Returns a pointer to the `T` component stored for this entity or null if
     /// there isn't one.
+    /// **WARNING**: The `EntityRef` should not be null!
     /// **WARNING**: Not fully threadsafe! If the component is removed while the
     ///              `T*` is still in use, the pointer will now point to an unused
     ///              `T` **or may even point to a different entity's `T` component**!!
     template <typename T>
     inline T* comp()
     {
-        auto store = scene_->storeFor<T>();
-        if(store)
-        {
-            return store->get(id_);
-        }
-        else
-        {
-            return nullptr;
-        }
+        auto store = scene_->storeFor<T>(); // (gets added if it does not already exist)
+        return store->get(id_);
     }
 
     /// Sets or replaces the `T` component stored for this entity and returns a
     /// pointer to the newly-stored component - or null if the component could
     /// not be set (entity id out of bounds?).
+    /// **WARNING**: The `EntityRef` should not be null!
     /// **WARNING**: Not fully threadsafe! If the component is removed while the
     ///              `T*` is still in use, the pointer will now point to an
     ///              unused `T` **or may even point to a different entity's `T` component**!!
     template <typename T>
     inline T* setComp(T&& comp)
     {
-        auto store = scene_->storeFor<T>();
-        if(store)
-        {
-            return store->set(id_, std::move(comp));
-        }
-        else
-        {
-            return nullptr;
-        }
+        auto store = scene_->storeFor<T>(); // (gets added if it does not already exist)
+        return store->set(id_, std::move(comp));
     }
 
     /// Erases any `T` component stored for this entity.
     /// Does nothing if there isn't one (component not set or entity id out of bounds).
+    /// **WARNING**: The `EntityRef` should not be null!
     /// **WARNING**: See `comp()`, `setComp()`'s warnings!
     template <typename T>
     inline void erase()
     {
-        auto store = scene_->storeFor<T>();
-        if(store)
-        {
-            store->erase(id_);
-        }
+        auto store = scene_->storeFor<T>(); // (gets added if it does not already exist)
+        store->erase(id_);
     }
 
     /// Erases all components stored for this entity.
     /// Does nothing if the entity id is out of bounds.
+    /// **WARNING**: The `EntityRef` should not be null!
     /// **WARNING**: See `comp()`, `setComp()`'s warnings!
     inline void eraseAll()
     {
