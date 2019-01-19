@@ -17,14 +17,7 @@ class Scene; // (#include "Scene/Scene.hh")
 class ResourceLoader; // (#include "Data/ResourceLoader.hh")
 
 /// Engine data stored globally, independent of which frame it is accessed by.
-///
-/// This includes things like loaded assets, ...
-/// are alternated in a ping-pong fashion.
-/// **Rendering/simulation/AI... is always one frame behind!**
-/// This heavily simplifies concurrency, since modules can run at any
-/// time/in any order during a frame - displaying/receiving events from a
-/// consistent, readonly "past" frame data, and pushing new events at will on the
-/// read/write "current" frame data.
+/// Also see FrameData.
 struct ARES_API GlobalData
 {
     /// The main engine log.
