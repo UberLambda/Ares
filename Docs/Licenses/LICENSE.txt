@@ -1,7 +1,0 @@
-This program is intellectual property of Paolo Jovon.
-Copyright (c) 2018 Paolo Jovon, All Rights Reserved.
-
-================ THIS IS A DEVELOPER BUILD, DO NOT REDISTRIBUTE ================
-
-The program has some third-party libraries embedded or distributed alongside it;
-for more information, see the file `3RDPARTY.md`.

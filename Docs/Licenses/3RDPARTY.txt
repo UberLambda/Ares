@@ -1,8 +1,3 @@
-This program is intellectual property of Paolo Jovon.
-Copyright (c) 2018 Paolo Jovon, All Rights Reserved.
-
-================ THIS IS AN INDEV BUILD, DO NOT REDISTRIBUTE ===================
-
 The program contains some third-party libraries embedded into it,
 whose licensing terms are as follows:
 
