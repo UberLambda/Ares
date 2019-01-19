@@ -13,7 +13,7 @@ which is open source and drastically improved after release 3.0.
   [Naughty Dog](https://www.gdcvault.com/play/1022186/Parallelizing-the-Naughty-Dog-Engine)**.
   Most of the design decisions were made with this in mind.
 - **Full rendering backend abstraction (stateless command queue)** and an implementation over OpenGL 3.3.
-  Similar to how [Sokol](https://github.com/floooh/sokol) is implemented, drawcalls are sorted to minimize
+  Similar to how [sokol-gfx](https://floooh.github.io/2017/07/29/sokol-gfx-tour.html) is implemented, drawcalls are sorted to minimize
   state changes (ex. rebining textures).
 - Full modularity, separation between game and engine code, and
   [entity-component-system design](https://github.com/skypjack/entt)
