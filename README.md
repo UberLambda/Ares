@@ -1,8 +1,8 @@
 # Ares
 **A**nother **re**ndering **s**ystem.
 
-A C++ game game engine made for learning purposes over the span of a summer.
-Development stopped in favor of [Godot](https://godotengine.com),
+A C++ game game engine made for learning purposes over the span of a summer.  
+Development stopped in favor of [Godot](https://godotengine.org),
 which is open source and drastically improved after release 3.0.
 
 ![Demo](Docs/Screenshots/Demo.png)
